@@ -1,0 +1,17 @@
+# Development happens on Windows, deployment happens on Linux. Normalise to LF in
+# the repository so line endings never show up as spurious diffs or break a build.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.avif binary
+*.woff binary
+*.woff2 binary
+*.mp4 binary
+*.webm binary
+
+package-lock.json linguist-generated=true -diff

@@ -1,0 +1,212 @@
+/* ==========================================================================
+   KITH — DESIGN TOKENS
+   "The Lit Room" — a warm, dark interior where light means presence.
+
+   This file is the single source of truth for the visual identity. Components
+   consume tokens; they never hard-code a colour, size, radius or duration.
+
+   Two modes:
+     Dusk     (default) — the room after dark
+     Daylight           — the same room, curtains open. Re-authored, not inverted.
+
+   Contrast: every foreground/ground pair below was checked against WCAG 2.1.
+   Body-copy tokens meet 4.5:1. Tokens marked "3:1 only" are for hairlines,
+   disabled states and large display type — never for body copy.
+   ========================================================================== */
+
+:root {
+  /* ---------------------------------------------------------------- TYPE -- */
+  /* Faces are injected by next/font in app/layout.tsx.
+     --font-general-sans is reserved: General Sans (Fontshare) is the intended
+     interface face but is not on Google Fonts. Drop the woff2 files into
+     public/fonts, wire next/font/local, and it takes over here with no other
+     change. Manrope is the stand-in until then. */
+  --ff-display: var(--font-fraunces), "Iowan Old Style", Palatino, Georgia, serif;
+  --ff-ui: var(--font-general-sans, var(--font-manrope)), ui-sans-serif, system-ui, sans-serif;
+  --ff-numeric: var(--font-martian-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Interface scale — dense, functional, 11 → 20px */
+  --fs-2xs: 0.6875rem;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-base: 0.9375rem;
+  --fs-md: 1.0625rem;
+  --fs-lg: 1.25rem;
+
+  /* Display scale — 28 → 160px. The gap between 20 and 28 is deliberate:
+     nothing lives there, and that void is what makes a headline land. */
+  --fs-d-xs: 1.75rem;
+  --fs-d-sm: 2.5rem;
+  --fs-d-md: 3.5rem;
+  --fs-d-lg: 5rem;
+  --fs-d-xl: 7.25rem;
+  --fs-d-2xl: 10rem;
+
+  --tr-display: -0.028em;
+  --tr-tight: -0.011em;
+  --tr-label: 0.12em;
+  --lh-display: 0.96;
+  --lh-body: 1.55;
+
+  /* Fraunces variation axes. SOFT warms the terminals, WONK adds the wobble
+     that keeps the wordmark from reading as a stock serif. */
+  --wonk-on: "SOFT" 40, "WONK" 1;
+  --wonk-off: "SOFT" 20, "WONK" 0;
+
+  /* -------------------------------------------------------------- SPACE -- */
+  /* The approved editorial scale, in px:
+       2 · 4 · 6 · 8 · 12 · 16 · 24 · 32 · 48 · 64 · 96 · 144 · 224
+     Every value is expressible in Tailwind's default 0.25rem step system
+     (0.5 · 1 · 1.5 · 2 · 3 · 4 · 6 · 8 · 12 · 16 · 24 · 36 · 56), so we keep
+     one spacing system rather than two. Stay on these steps. */
+
+  /* ------------------------------------------------------------- RADIUS -- */
+  /* Radius carries meaning: near-square reads architectural (the room itself),
+     rounded reads interactive (things you touch). Uniform 12px everywhere is
+     the loudest generated-UI tell — do not do it. */
+  --r-edge: 2px;
+  --r-soft: 10px;
+  --r-bubble: 14px 14px 14px 3px;
+  --r-full: 999px;
+
+  /* ---------------------------------------------------------- ELEVATION -- */
+  /* In a lit room, elevation is light, not a grey blur. A raised surface is
+     one step lighter + a hairline catching light + a tight occlusion. */
+  --elev-raised: 0 1px 2px rgb(0 0 0 / 0.5);
+  --elev-lifted: 0 2px 4px rgb(0 0 0 / 0.4), 0 12px 28px -8px rgb(0 0 0 / 0.55);
+  --elev-lit: 0 0 24px -8px var(--ember);
+
+  /* ------------------------------------------------------------- MOTION -- */
+  /* Duration encodes consequence:
+       tap       — heard you
+       quick     — hover / focus
+       base      — something changed
+       considered— a surface arrived
+       journey   — you moved somewhere
+       story     — landing scroll beats only */
+  --t-tap: 80ms;
+  --t-quick: 140ms;
+  --t-base: 240ms;
+  --t-considered: 380ms;
+  --t-journey: 620ms;
+  --t-story: 1100ms;
+
+  --e-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --e-exit: cubic-bezier(0.4, 0, 1, 1);
+  --e-move: cubic-bezier(0.65, 0, 0.35, 1);
+  /* The only overshoot in the system. Licensed to Games and celebration. */
+  --e-play: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ------------------------------------------------------------ TEXTURE -- */
+  --grain-opacity: 0.035;
+  --grain-invert: 0;
+}
+
+/* ============================================================ DUSK (default) */
+:root,
+[data-theme="dusk"] {
+  color-scheme: dark;
+
+  --ground: #0e0b0a;
+  --surface: #16110f;
+  --surface-raised: #1f1917;
+  --surface-sunken: #0a0807;
+
+  --line: #2b2320;
+  --line-lit: #3d3330;
+
+  --fg-loud: #fbf7f2;
+  --fg: #e8e0da;
+  --fg-dim: #8a7c76; /* 4.9:1 */
+  --fg-faint: #6b5f5d; /* 3.1:1 — 3:1 only */
+
+  --ember: #e8613c; /* 5.7:1 */
+  --ember-soft: #f2896b;
+  --lantern: #f2b441; /* 10.4:1 */
+  --moss: #6f8f5a; /* 5.3:1 */
+  --signal: #d4574a; /* 4.8:1 */
+  --plum: #b76a7e; /* 4.9:1 */
+  --plum-deep: #6d3746;
+  --ice: #7fa6a0; /* 7.2:1 */
+  --on-accent: #1a0d08;
+}
+
+/* ================================================================ DAYLIGHT */
+[data-theme="daylight"] {
+  color-scheme: light;
+
+  --ground: #f5efe7;
+  --surface: #efe7dd;
+  --surface-raised: #fbf7f1;
+  --surface-sunken: #e7ddd1;
+
+  --line: #ddd2c4;
+  --line-lit: #c9bcab;
+
+  --fg-loud: #0e0b0a;
+  --fg: #1a1412;
+  --fg-dim: #6b5f57; /* 5.5:1 */
+  --fg-faint: #94867a; /* 3.1:1 — 3:1 only */
+
+  --ember: #b64318; /* 4.8:1 */
+  --ember-soft: #d4602f;
+  --lantern: #8a6018; /* 4.9:1 */
+  --moss: #4a6b36; /* 5.3:1 */
+  --signal: #a33227; /* 6.0:1 */
+  --plum: #7a3a4a; /* 7.3:1 */
+  --plum-deep: #5c2735;
+  --ice: #416b64; /* 5.2:1 */
+  --on-accent: #fff6f0;
+
+  --elev-raised: 0 1px 2px rgb(60 40 25 / 0.1);
+  --elev-lifted: 0 2px 4px rgb(60 40 25 / 0.08), 0 12px 28px -8px rgb(60 40 25 / 0.16);
+  --grain-opacity: 0.05;
+  --grain-invert: 1;
+}
+
+/* ============================================================== PRESENCE */
+/* The core motif: presence is light. Never encoded by colour alone — the
+   PresenceEmber component pairs each state with a ring treatment and an
+   accessible label so it survives greyscale, colour blindness and motion-off. */
+:root {
+  --presence-lit: var(--ember);
+  --presence-cooling: var(--lantern);
+  --presence-dark: var(--fg-faint);
+}
+
+/* ========================================================= REDUCED MOTION */
+/* Three tiers, not a boolean. `data-motion` on <html> is the single source of
+   truth so CSS and JS can never disagree.
+     full     — default
+     reduced  — system preference; opacity/colour only
+     off      — explicit user setting (Settings → Appearance, Phase 2) */
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) {
+    --t-tap: 0ms;
+    --t-quick: 0ms;
+    --t-base: 0ms;
+    --t-considered: 0ms;
+    --t-journey: 0ms;
+    --t-story: 0ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) *,
+  :root:not([data-motion="full"]) *::before,
+  :root:not([data-motion="full"]) *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+[data-motion="off"] *,
+[data-motion="off"] *::before,
+[data-motion="off"] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  scroll-behavior: auto !important;
+}

@@ -1,0 +1,231 @@
+@import "tailwindcss";
+@import "../styles/tokens.css";
+
+/* Dusk is the default and is always present as an attribute on <html>, so the
+   `daylight:` variant is the exception rather than a `dark:` inversion. Most
+   theming happens through the semantic tokens and needs no variant at all. */
+@custom-variant daylight (&:where([data-theme="daylight"], [data-theme="daylight"] *));
+
+/* Clear Tailwind's defaults. This is deliberate: if `bg-slate-800`, `text-xl`
+   or `rounded-lg` still resolved, off-system values would leak in under
+   deadline pressure. Only KITH tokens compile. */
+@theme {
+  --color-*: initial;
+  --font-*: initial;
+  --text-*: initial;
+  --radius-*: initial;
+  --ease-*: initial;
+  --tracking-*: initial;
+  --leading-*: initial;
+  --shadow-*: initial;
+}
+
+@theme inline {
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-sunken: var(--surface-sunken);
+  --color-line: var(--line);
+  --color-line-lit: var(--line-lit);
+
+  --color-fg: var(--fg);
+  --color-fg-loud: var(--fg-loud);
+  --color-fg-dim: var(--fg-dim);
+  --color-fg-faint: var(--fg-faint);
+
+  --color-ember: var(--ember);
+  --color-ember-soft: var(--ember-soft);
+  --color-lantern: var(--lantern);
+  --color-moss: var(--moss);
+  --color-signal: var(--signal);
+  --color-plum: var(--plum);
+  --color-plum-deep: var(--plum-deep);
+  --color-ice: var(--ice);
+  --color-on-accent: var(--on-accent);
+
+  --font-display: var(--ff-display);
+  --font-ui: var(--ff-ui);
+  --font-numeric: var(--ff-numeric);
+
+  --text-2xs: var(--fs-2xs);
+  --text-xs: var(--fs-xs);
+  --text-sm: var(--fs-sm);
+  --text-base: var(--fs-base);
+  --text-md: var(--fs-md);
+  --text-lg: var(--fs-lg);
+  --text-d-xs: var(--fs-d-xs);
+  --text-d-sm: var(--fs-d-sm);
+  --text-d-md: var(--fs-d-md);
+  --text-d-lg: var(--fs-d-lg);
+  --text-d-xl: var(--fs-d-xl);
+  --text-d-2xl: var(--fs-d-2xl);
+
+  --tracking-display: var(--tr-display);
+  --tracking-tight: var(--tr-tight);
+  --tracking-label: var(--tr-label);
+  --leading-display: var(--lh-display);
+  --leading-body: var(--lh-body);
+
+  --radius-edge: var(--r-edge);
+  --radius-soft: var(--r-soft);
+  --radius-full: var(--r-full);
+
+  --shadow-raised: var(--elev-raised);
+  --shadow-lifted: var(--elev-lifted);
+  --shadow-lit: var(--elev-lit);
+
+  --ease-enter: var(--e-enter);
+  --ease-exit: var(--e-exit);
+  --ease-move: var(--e-move);
+  --ease-play: var(--e-play);
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--line);
+  }
+
+  html {
+    background-color: var(--ground);
+    color: var(--fg);
+    font-family: var(--ff-ui);
+    font-size: 100%;
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-size: var(--fs-base);
+    line-height: var(--lh-body);
+    letter-spacing: var(--tr-tight);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Focus is part of the design, not a browser afterthought. */
+  :focus-visible {
+    outline: 2px solid var(--ember);
+    outline-offset: 2px;
+    border-radius: var(--r-edge);
+  }
+
+  ::selection {
+    background-color: var(--ember);
+    color: var(--on-accent);
+  }
+
+  /* Numerals line up wherever they carry meaning. */
+  time,
+  output,
+  [data-numeric] {
+    font-family: var(--ff-numeric);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* Display type. `.display` is the plain setting; `.display-wonk` turns on the
+     Fraunces personality axes and is reserved for the wordmark and hero moments —
+     used everywhere it stops meaning anything. */
+  .display {
+    font-family: var(--ff-display);
+    font-variation-settings: var(--wonk-off);
+    letter-spacing: var(--tr-display);
+    line-height: var(--lh-display);
+    font-weight: 500;
+  }
+
+  .display-wonk {
+    font-family: var(--ff-display);
+    font-variation-settings: var(--wonk-on);
+    letter-spacing: var(--tr-display);
+    line-height: var(--lh-display);
+    font-weight: 600;
+  }
+
+  /* 11px all-caps with generous tracking. The only place all-caps is allowed. */
+  .label {
+    font-family: var(--ff-numeric);
+    font-size: var(--fs-2xs);
+    letter-spacing: var(--tr-label);
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  /* Paper tooth. One static composited layer at ~3.5% — enough to read as a
+     material rather than a render, cheap enough to cost nothing. No blend mode:
+     blending a viewport-sized layer forces the whole page to composite. */
+  .grain::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    filter: invert(var(--grain-invert));
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .grain::after {
+      display: none;
+    }
+  }
+
+  /* Theme toggle labels are swapped by CSS, not by React state, so the button
+     never hydrates with the wrong word. */
+  [data-theme="daylight"] .theme-label--to-daylight,
+  :root:not([data-theme="daylight"]) .theme-label--to-dusk {
+    display: none;
+  }
+}
+
+@layer components {
+  /* --- Presence ember -------------------------------------------------------
+     The core motif. Presence is light: lit / cooling / dark. Each state carries
+     a shape difference as well as a colour difference (filled / ringed / hollow)
+     so it still reads in greyscale and for colour-blind users. */
+  .ember-dot {
+    position: relative;
+    display: inline-block;
+    border-radius: var(--r-full);
+    transition:
+      background-color var(--t-base) var(--e-move),
+      box-shadow var(--t-base) var(--e-move),
+      border-color var(--t-base) var(--e-move);
+  }
+
+  .ember-dot[data-state="lit"] {
+    background-color: var(--presence-lit);
+    border: 1px solid var(--presence-lit);
+    box-shadow: 0 0 12px -2px var(--presence-lit);
+    animation: ember-breathe 4.5s var(--e-move) infinite;
+  }
+
+  .ember-dot[data-state="cooling"] {
+    background-color: transparent;
+    border: 2px solid var(--presence-cooling);
+    box-shadow: 0 0 8px -3px var(--presence-cooling);
+  }
+
+  .ember-dot[data-state="dark"] {
+    background-color: transparent;
+    border: 1px solid var(--presence-dark);
+    box-shadow: none;
+  }
+
+  @keyframes ember-breathe {
+    0%,
+    100% {
+      box-shadow: 0 0 10px -3px var(--presence-lit);
+    }
+    50% {
+      box-shadow: 0 0 16px 0 var(--presence-lit);
+    }
+  }
+}
