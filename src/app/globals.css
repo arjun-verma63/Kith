@@ -71,6 +71,7 @@
   --leading-body: var(--lh-body);
 
   --radius-edge: var(--r-edge);
+  --radius-inset: var(--r-inset);
   --radius-soft: var(--r-soft);
   --radius-full: var(--r-full);
 

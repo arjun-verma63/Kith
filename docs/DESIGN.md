@@ -95,10 +95,20 @@ blending a viewport-sized layer forces the whole page to composite.
 
 Hard boundary: **GSAP never animates a button hover. Framer never does what CSS does.**
 
-None of these libraries are installed yet. They arrive with the surfaces that need them,
-scoped by route group — the marketing shell may carry GSAP/ScrollTrigger/Lenis/R3F; the
-app shell ships Framer + CSS only, with GSAP core dynamically imported into the three
-surfaces that genuinely need timelines.
+**Framer Motion is installed; GSAP and Lenis are not.** The landing page uses Framer for
+the three effects CSS genuinely cannot produce — a shared-element tab indicator that
+travels via `layoutId`, coordinated enter/exit through `AnimatePresence`, and staggered
+masked line reveals. Everything else on that page, and every overlay primitive in the
+design system, is CSS.
+
+GSAP earns its place only when a multi-element timeline needs sequencing or scrubbing —
+the call-connect sequence and the game countdown are the likely first calls, dynamically
+imported into those surfaces alone. Lenis is not currently planned at all: the smooth
+scroll it buys is not worth what it costs the app shell.
+
+`useMotionAllowed()` (`src/lib/hooks/use-motion-preference.ts`) is how JavaScript reads
+the three-tier policy, so the animation layer and the stylesheet are looking at the same
+`data-motion` attribute rather than two independent guesses.
 
 ### Reduced motion — three tiers, not a boolean
 

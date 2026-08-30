@@ -140,17 +140,23 @@ and `--font-general-sans` in `tokens.css` takes over with no other change.
 design decision, not a config gap — add it to `tokens.css`.
 
 Motion tokens (`--t-*`, `--e-*`) are respected by a three-tier reduced-motion policy
-(`full` / `reduced` / `off`) driven by the `data-motion` attribute on `<html>`. GSAP,
-Framer Motion and Lenis are **not** installed: the overlay primitives reach the motion
-spec with native `<dialog>` and CSS `@starting-style`, so a library would have bought
-nothing. They arrive with the app shell, where shared-element transitions and drag start
-to need them.
+(`full` / `reduced` / `off`) driven by the `data-motion` attribute on `<html>` and read
+by JavaScript through `useMotionAllowed()`, so CSS and the animation layer can never
+disagree.
+
+**Framer Motion** (the `motion` package) is installed and used on the landing page only,
+for the three things CSS cannot do: a shared-element indicator that travels between tabs,
+coordinated enter/exit across a swap, and masked line reveals. The design-system overlay
+primitives use native `<dialog>` and CSS `@starting-style` instead. GSAP and Lenis are
+**not** installed and are not currently planned.
 
 ### Components
 
 `src/components/ui/` holds the design-system primitives — icons, button, input, field,
 panel, card, avatar, badge, presence ember, dialog, menu, toast, skeleton, empty state.
 `src/components/layout/` holds the chrome — nav rail, mobile nav bar, theme toggle.
+`src/features/landing/` holds the marketing page: one component per section, with all
+copy in `copy.ts` so the writing can be read and edited in one place.
 
 **`/styleguide` renders the whole system on one page**, in both modes. It is a
 development tool and returns 404 in production:

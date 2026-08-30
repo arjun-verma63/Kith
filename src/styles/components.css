@@ -516,3 +516,76 @@
     transform: none;
   }
 }
+
+@layer components {
+  /* --- Message bubbles ------------------------------------------------------
+     Asymmetric radius pointing at whoever said it: the flat corner sits on the
+     speaker's side, so the shape itself carries the direction and the thread
+     stays readable with the avatars stripped out. Two identical rounded
+     rectangles in different colours is the pattern every messaging app already
+     has, and it tells you nothing without the colour. */
+  .bubble-in {
+    border-radius: var(--r-bubble);
+  }
+
+  .bubble-out {
+    border-radius: 14px 14px 3px 14px;
+  }
+
+  /* --- Text link ------------------------------------------------------------
+     The rule grows from the leading edge rather than fading in, so the hover
+     has a direction and an origin like everything else in the system. */
+  .link-grow {
+    position: relative;
+    transition: color var(--t-quick) var(--e-move);
+  }
+
+  .link-grow::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 -0.35em auto;
+    left: 0;
+    height: 1px;
+    background-color: var(--ember);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform var(--t-base) var(--e-enter);
+  }
+
+  .link-grow:hover,
+  .link-grow:focus-visible {
+    color: var(--fg-loud);
+  }
+
+  .link-grow:hover::after,
+  .link-grow:focus-visible::after {
+    transform: scaleX(1);
+  }
+
+  /* --- Editorial row --------------------------------------------------------
+     Feature rows and spec rows. Hover lights the leading edge and warms the
+     title — the same "this one" language as the navigation, at list scale. */
+  .row-lit {
+    position: relative;
+    transition: background-color var(--t-quick) var(--e-move);
+  }
+
+  .row-lit::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--stroke-lit);
+    background-color: var(--ember);
+    transform: scaleY(0);
+    transform-origin: center;
+    transition: transform var(--t-base) var(--e-enter);
+  }
+
+  .row-lit:hover {
+    background-color: var(--wash-hover);
+  }
+
+  .row-lit:hover::before {
+    transform: scaleY(1);
+  }
+}
