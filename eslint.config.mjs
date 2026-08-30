@@ -75,6 +75,15 @@ const eslintConfig = defineConfig([
   },
 
   {
+    // Build and CI scripts. Their stdout is the deliverable, not a stray debug
+    // statement, and they never run inside the application.
+    files: ["scripts/**/*.{mjs,js,ts}"],
+    rules: {
+      "no-console": "off",
+    },
+  },
+
+  {
     // lib/ is the bottom of the stack.
     files: ["src/lib/**/*.{ts,tsx}"],
     rules: {

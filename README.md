@@ -44,6 +44,11 @@ served from our own origin.
 | `npm run format:check` | Prettier check — what CI runs                             |
 | `npm run check`        | `typecheck` + `lint` + `format:check`. Run before pushing |
 | `npm run clean`        | Remove `.next` and the build cache                        |
+| `npm run check:bundle` | Scan the built client bundle for server-only secrets      |
+| `npm run db:start`     | Local Supabase stack (needs Docker)                       |
+| `npm run db:reset`     | Drop and replay every migration                           |
+| `npm run db:diff`      | Capture local schema changes as a migration               |
+| `npm run db:types`     | Regenerate `src/types/database.ts`                        |
 
 ## Structure
 
@@ -116,8 +121,40 @@ All environment access goes through `src/lib/env/`, never `process.env` at a cal
   build failure rather than a leak.
 
 Adding a variable means three edits: the Zod schema, `.env.example`, and the Vercel
-project settings for each environment. See `.env.example` for the variables that later
-phases will need — they are documented but deliberately not yet validated.
+project settings for each environment.
+
+The app runs on a fresh clone with **no configuration at all** — the landing page has no
+database in it, so Supabase credentials are validated lazily, when a client is first
+constructed, rather than at import.
+
+## Supabase
+
+Four clients in `src/lib/supabase/`, and the choice between them is not a preference:
+
+| Module          | Key              | RLS          | Where                                                    |
+| --------------- | ---------------- | ------------ | -------------------------------------------------------- |
+| `client.ts`     | anon             | **enforced** | Client components. One singleton per tab.                |
+| `server.ts`     | anon             | **enforced** | Server Components, Actions, Route Handlers. Per request. |
+| `middleware.ts` | anon             | **enforced** | `src/middleware.ts` only — refreshes the session.        |
+| `admin.ts`      | **service role** | **bypassed** | Almost nowhere. Each use justified at the call site.     |
+
+`src/middleware.ts` is not optional: Server Components cannot write cookies, so token
+rotation has to happen in middleware or not at all. Without it everyone is signed out
+about once an hour.
+
+Two guards worth knowing about:
+
+- The env schema **refuses to boot** if a service-role key is given to
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY`. That mistake otherwise works perfectly while
+  publishing full database access in the browser bundle.
+- `npm run build && npm run check:bundle` scans the built client bundle for the value of
+  every server-only secret and fails if one appears. Run it in CI.
+
+**[docs/SUPABASE.md](docs/SUPABASE.md) is the credential map** — what each key can do,
+where it belongs per environment, and what to do if one leaks.
+
+Database work lives in `supabase/` — migrations only, never the dashboard. See
+[supabase/README.md](supabase/README.md).
 
 ## Design system
 
@@ -178,9 +215,9 @@ See [docs/DESIGN.md](docs/DESIGN.md) for what each component decides and why.
 
 ## What is next
 
-Phase 2 is identity: invite-gated signup, email verification, password reset, session
-middleware, the `profiles` table and its RLS policies. See the architecture document for
-the full phase plan.
+Phase 3 is identity: invite-gated signup, email verification, password reset, route
+protection in the middleware, the `profiles` table and its RLS policies. See
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full phase plan.
 
 ## Licence
 
