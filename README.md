@@ -49,6 +49,9 @@ served from our own origin.
 | `npm run db:reset`     | Drop and replay every migration                           |
 | `npm run db:diff`      | Capture local schema changes as a migration               |
 | `npm run db:types`     | Regenerate `src/types/database.ts`                        |
+| `npm run test`         | Schema/RLS suite + authentication suite                   |
+| `npm run db:test`      | RLS suite only                                            |
+| `npm run auth:test`    | Redirect rules, validation, invite redemption             |
 
 ## Structure
 
@@ -213,10 +216,60 @@ See [docs/DESIGN.md](docs/DESIGN.md) for what each component decides and why.
   `connect-src` origins (Supabase REST + Realtime WebSocket, TURN). Both arrive in
   Phase 2. A placeholder CSP that gets widened to `unsafe-inline` is worse than none.
 
+## Authentication
+
+Email and password through Supabase Auth, **invite-gated**. Routes:
+
+| Route              |                                                               |
+| ------------------ | ------------------------------------------------------------- |
+| `/login`           | Sign in                                                       |
+| `/signup`          | Create an account, with an invitation code                    |
+| `/forgot-password` | Request a reset link                                          |
+| `/reset-password`  | Set a new password (requires the recovery session)            |
+| `/verify-email`    | Held here until the address is confirmed                      |
+| `/auth/confirm`    | Where every email link lands; exchanges the token server-side |
+
+### Getting the first account in
+
+There is no public sign-up, which creates a chicken-and-egg problem: the first
+person needs an invitation from someone who does not exist yet. So **while there
+are no profiles at all, the first signup needs no code** — an empty room lets the
+first person in, and everyone after them needs an invitation.
+
+To issue one, hash the code and insert it (the plaintext is never stored):
+
+```sql
+-- Pick a code, e.g. kith-7f3a9c. Then:
+insert into public.invite_codes (code_hash, created_by, note, max_uses)
+values (encode(digest('kith-7f3a9c', 'sha256'), 'hex'), '<your-profile-id>', 'for Rafa', 1);
+```
+
+Send the plaintext code. `/signup?invite=kith-7f3a9c` prefills the field.
+
+### The rules, in one place
+
+`src/features/auth/redirects.ts` is a pure function with no Supabase and no
+Next.js in it, so middleware and pages cannot disagree about who goes where — and
+so the rules can be tested exhaustively without a database. Two that matter:
+
+- An unverified account is held at `/verify-email` and **cannot walk around it**
+  by navigating to `/login`.
+- `?next=` is sanitised by `safeRedirect`. An open redirect is how a phishing
+  link gets to wear your domain.
+
+### What is deliberately absent
+
+- **No 2FA yet.** It is the next phase, and the schema already has the AAL2
+  step-up policies waiting for it.
+- **Sign-in errors never say whether an account exists.** On an invitation-only
+  app, "no account with that email" tells a stranger who is a member.
+- **Nothing logs a password.** Not on success, not on failure. Every log line in
+  the auth path carries a status code and an error message, never an input.
+
 ## What is next
 
-Phase 3 is identity: invite-gated signup, email verification, password reset, route
-protection in the middleware, the `profiles` table and its RLS policies. See
+Two-factor authentication: TOTP enrolment, the AAL2 challenge, recovery codes, and
+wiring the step-up policies the schema already carries. See
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full phase plan.
 
 ## Licence

@@ -67,9 +67,22 @@ export async function updateSession(request: NextRequest): Promise<{
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // A network failure here must not take the whole site down. If Supabase is
+  // unreachable, treat the request as signed out: a signed-in user gets bounced
+  // to /login during an outage, which is annoying but recoverable, whereas an
+  // unhandled rejection in middleware turns every route — including the landing
+  // page — into a 500. Row Level Security is still what protects the data, so
+  // failing closed here costs nothing but a redirect.
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  return { response, user };
+    return { response, user };
+  } catch (error) {
+    console.error("[kith:auth] session refresh failed", {
+      message: error instanceof Error ? error.message : "unknown",
+    });
+    return { response, user: null };
+  }
 }

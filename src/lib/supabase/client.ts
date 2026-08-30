@@ -21,6 +21,16 @@ import type { Database } from "@/types/database";
 
 export type KithSupabaseClient = SupabaseClient<Database>;
 
+/**
+ * Re-exported so routes and features never import from `@supabase/*` directly.
+ *
+ * The ESLint boundary that forbids it exists to stop a client being constructed
+ * outside `lib/supabase`, and it cannot distinguish a type import from a value
+ * import. Rather than carve an exception into the rule — which would then let a
+ * real client through — the types the rest of the app needs come through here.
+ */
+export type { EmailOtpType, Session, User } from "@supabase/supabase-js";
+
 let browserClient: KithSupabaseClient | undefined;
 
 export function getSupabaseBrowserClient(): KithSupabaseClient {

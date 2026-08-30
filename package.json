@@ -24,7 +24,9 @@
     "db:diff": "npx supabase db diff -f",
     "db:push": "npx supabase db push",
     "db:types": "npx supabase gen types typescript --local > src/types/database.ts",
-    "db:test": "node supabase/tests/rls.test.mjs"
+    "db:test": "node supabase/tests/rls.test.mjs",
+    "auth:test": "node supabase/tests/auth.test.mjs",
+    "test": "npm run db:test && npm run auth:test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

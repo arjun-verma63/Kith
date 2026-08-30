@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 
 import { Icon, type IconName } from "@/components/ui/icon";
@@ -49,6 +50,40 @@ const ICON_SIZE = {
   lg: "size-[var(--control-lg)] px-0",
 } as const;
 
+/**
+ * The shared appearance, extracted so `ButtonLink` can be a real anchor.
+ *
+ * A button with an onClick that navigates throws away middle-click, cmd-click,
+ * "open in new tab" and "copy link address" — everything a link gives for free.
+ * Where the action is navigation, the element should be an anchor.
+ */
+export function buttonClasses({
+  variant = "quiet",
+  size = "md",
+  iconOnly = false,
+  fullWidth = false,
+  className,
+}: {
+  variant?: keyof typeof VARIANT;
+  size?: keyof typeof SIZE;
+  iconOnly?: boolean;
+  fullWidth?: boolean;
+  className?: string | undefined;
+}): string {
+  return cn(
+    "control-focus relative inline-flex cursor-pointer items-center justify-center",
+    "rounded-soft font-ui font-medium whitespace-nowrap",
+    "transition-[background-color,border-color,color,transform,box-shadow]",
+    "duration-[var(--t-quick)] ease-move",
+    "active:scale-[0.97] active:duration-[var(--t-tap)]",
+    "disabled:pointer-events-none disabled:opacity-40",
+    VARIANT[variant],
+    iconOnly ? ICON_SIZE[size] : SIZE[size],
+    fullWidth && "w-full",
+    className,
+  );
+}
+
 export interface ButtonProps extends Omit<ComponentProps<"button">, "children"> {
   variant?: keyof typeof VARIANT;
   size?: keyof typeof SIZE;
@@ -85,18 +120,7 @@ export function Button({
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={cn(
-        "control-focus relative inline-flex cursor-pointer items-center justify-center",
-        "rounded-soft font-ui font-medium whitespace-nowrap",
-        "transition-[background-color,border-color,color,transform,box-shadow]",
-        "duration-[var(--t-quick)] ease-move",
-        "active:scale-[0.97] active:duration-[var(--t-tap)]",
-        "disabled:pointer-events-none disabled:opacity-40",
-        VARIANT[variant],
-        iconOnly ? ICON_SIZE[size] : SIZE[size],
-        fullWidth && "w-full",
-        className,
-      )}
+      className={buttonClasses({ variant, size, iconOnly, fullWidth, className })}
       {...props}
     >
       {/* The label keeps its space while loading, so the button does not resize
@@ -113,5 +137,38 @@ export function Button({
         </span>
       ) : null}
     </button>
+  );
+}
+
+export interface ButtonLinkProps extends Omit<ComponentProps<typeof Link>, "children"> {
+  variant?: keyof typeof VARIANT;
+  size?: keyof typeof SIZE;
+  iconOnly?: boolean;
+  icon?: IconName;
+  trailingIcon?: IconName;
+  fullWidth?: boolean;
+  children?: ReactNode;
+}
+
+/** A link that looks like a button. Same clothes, correct element. */
+export function ButtonLink({
+  variant = "quiet",
+  size = "md",
+  iconOnly = false,
+  icon,
+  trailingIcon,
+  fullWidth = false,
+  className,
+  children,
+  ...props
+}: ButtonLinkProps) {
+  const iconPx = size === "lg" ? 20 : 16;
+
+  return (
+    <Link className={buttonClasses({ variant, size, iconOnly, fullWidth, className })} {...props}>
+      {icon ? <Icon name={icon} size={iconPx} /> : null}
+      {iconOnly ? null : children}
+      {trailingIcon && !iconOnly ? <Icon name={trailingIcon} size={iconPx} /> : null}
+    </Link>
   );
 }

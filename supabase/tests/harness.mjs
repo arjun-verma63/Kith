@@ -100,11 +100,30 @@ const SUPABASE_STUBS = /* sql */ `
   grant usage on schema public, auth, realtime to anon, authenticated, service_role;
 `;
 
-/** Grants matching what Supabase applies to newly created objects. */
-const GRANTS = /* sql */ `
-  grant all on all tables in schema public to anon, authenticated, service_role;
-  grant all on all sequences in schema public to anon, authenticated, service_role;
-  grant all on all functions in schema public to anon, authenticated, service_role;
+/**
+ * Supabase's default privileges, set BEFORE the migrations run.
+ *
+ * This ordering is not cosmetic. Supabase grants privileges through ALTER
+ * DEFAULT PRIVILEGES, so an object receives them at the moment it is created —
+ * which means a migration that creates a function and then REVOKEs EXECUTE from
+ * `authenticated` has the last word.
+ *
+ * An earlier version of this harness ran a blanket `grant all on all functions`
+ * *after* the migrations instead, which silently re-granted everything migration
+ * 0010 had revoked. The suite then reported the revoke as broken. The revoke was
+ * fine; the harness was lying about production. Emulating the mechanism rather
+ * than the end state is the difference.
+ */
+const DEFAULT_PRIVILEGES = /* sql */ `
+  alter default privileges in schema public
+    grant all on tables to anon, authenticated, service_role;
+  alter default privileges in schema public
+    grant all on sequences to anon, authenticated, service_role;
+  alter default privileges in schema public
+    grant all on functions to anon, authenticated, service_role;
+  alter default privileges in schema realtime
+    grant all on tables to anon, authenticated, service_role;
+
   grant all on all tables in schema realtime to anon, authenticated, service_role;
   grant all on all tables in schema auth to service_role;
   grant select on auth.users to authenticated;
@@ -126,6 +145,7 @@ export function migrationFiles() {
 export async function freshDatabase() {
   const db = new PGlite();
   await db.exec(SUPABASE_STUBS);
+  await db.exec(DEFAULT_PRIVILEGES);
 
   for (const file of migrationFiles()) {
     const sql = readFileSync(join(MIGRATIONS_DIR, file), "utf8");
@@ -136,7 +156,6 @@ export async function freshDatabase() {
     }
   }
 
-  await db.exec(GRANTS);
   return db;
 }
 
