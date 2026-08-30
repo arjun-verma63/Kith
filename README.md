@@ -139,11 +139,27 @@ and `--font-general-sans` in `tokens.css` takes over with no other change.
 `rounded-lg` do not compile. Only KITH tokens do. If a value you want is missing, it is a
 design decision, not a config gap — add it to `tokens.css`.
 
-Motion tokens (`--t-*`, `--e-*`) are already defined and respected by a three-tier
-reduced-motion policy (`full` / `reduced` / `off`) driven by the `data-motion` attribute
-on `<html>`. GSAP, Framer Motion and Lenis are **not** installed yet; they arrive with the
-surfaces that need them, scoped by route group so the app shell never carries the
-marketing page's animation weight.
+Motion tokens (`--t-*`, `--e-*`) are respected by a three-tier reduced-motion policy
+(`full` / `reduced` / `off`) driven by the `data-motion` attribute on `<html>`. GSAP,
+Framer Motion and Lenis are **not** installed: the overlay primitives reach the motion
+spec with native `<dialog>` and CSS `@starting-style`, so a library would have bought
+nothing. They arrive with the app shell, where shared-element transitions and drag start
+to need them.
+
+### Components
+
+`src/components/ui/` holds the design-system primitives — icons, button, input, field,
+panel, card, avatar, badge, presence ember, dialog, menu, toast, skeleton, empty state.
+`src/components/layout/` holds the chrome — nav rail, mobile nav bar, theme toggle.
+
+**`/styleguide` renders the whole system on one page**, in both modes. It is a
+development tool and returns 404 in production:
+
+```bash
+npm run dev   # then open http://localhost:3000/styleguide
+```
+
+See [docs/DESIGN.md](docs/DESIGN.md) for what each component decides and why.
 
 ## Security posture at this phase
 

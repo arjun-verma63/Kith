@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "../styles/tokens.css";
+@import "../styles/components.css";
 
 /* Dusk is the default and is always present as an attribute on <html>, so the
    `daylight:` variant is the exception rather than a `dark:` inversion. Most

@@ -1,0 +1,518 @@
+/* ==========================================================================
+   KITH — COMPONENT PRIMITIVES
+
+   The treatments that carry the identity and that Tailwind utilities cannot
+   express: pseudo-element edges, masks, keyframes, ::backdrop, @starting-style.
+   Everything here reads from tokens.css — no literal colours, sizes or
+   durations below this line.
+
+   Layout and spacing stay as Tailwind utilities inside the components.
+   ========================================================================== */
+
+@layer components {
+  /* ======================================================== TYPOGRAPHY == */
+
+  /* Fraunces at interface scale. Section titles, dialog titles, empty-state
+     headlines — the places a serif should speak without shouting.
+     `.display` (in globals.css) is for the big editorial moments. */
+  .heading {
+    font-family: var(--ff-display);
+    font-variation-settings: var(--wonk-off);
+    letter-spacing: var(--tr-tight);
+    line-height: 1.12;
+    font-weight: 550;
+  }
+
+  /* Anything countable, measurable or elapsing. Tabular so digits do not
+     jitter while a call timer runs. */
+  .numeric {
+    font-family: var(--ff-numeric);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+
+  /* Long-form reading: bios, help text, prompts. */
+  .prose {
+    max-width: 68ch;
+    line-height: var(--lh-body);
+  }
+
+  .prose > * + * {
+    margin-top: 1em;
+  }
+
+  /* ========================================================= BACKGROUND == */
+
+  /* The lit room. Fixed so the light stays with the viewport rather than
+     scrolling away with the content. */
+  .room {
+    background-color: var(--ground);
+    background-image: var(--bg-room);
+    background-attachment: fixed;
+  }
+
+  /* ========================================================== SURFACES == */
+
+  /* Architectural. Near-square, because this is the room, not a control. */
+  .panel {
+    position: relative;
+    background-color: var(--surface);
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--r-edge);
+  }
+
+  /* Elevation is light: one step lighter, a hairline catching light along the
+     top edge, and a tight occlusion beneath. No diffuse grey blur stack. */
+  .panel-raised {
+    background-color: var(--surface-raised);
+    box-shadow: var(--elev-raised);
+  }
+
+  .panel-raised::before,
+  .panel-overlay::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: var(--stroke);
+    background: var(--edge-lit);
+    pointer-events: none;
+  }
+
+  /* Things that came to you: menus, dialogs, toasts. */
+  .panel-overlay {
+    position: relative;
+    background-color: var(--surface-raised);
+    border: var(--stroke) solid var(--line-lit);
+    box-shadow: var(--elev-overlay);
+  }
+
+  .panel-sunken {
+    background-color: var(--surface-sunken);
+    box-shadow: var(--elev-inset);
+  }
+
+  /* Interactive surface. Used sparingly — a wall of rounded cards is the
+     template look we are avoiding. */
+  .card {
+    position: relative;
+    display: block;
+    width: 100%;
+    text-align: left;
+    background-color: var(--surface);
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--r-soft);
+    transition:
+      background-color var(--t-quick) var(--e-move),
+      border-color var(--t-quick) var(--e-move),
+      transform var(--t-quick) var(--e-move);
+  }
+
+  .card:hover {
+    background-color: var(--surface-raised);
+    border-color: var(--line-lit);
+  }
+
+  .card:active {
+    transform: scale(0.995);
+    transition-duration: var(--t-tap);
+  }
+
+  /* ================================================== LIT EDGE (SIGNAL) ==
+     The system's way of saying "this one". A 2px bar of light along an edge,
+     never a filled pill — filled pills on navigation are the Discord tell. */
+  .lit-edge {
+    position: relative;
+  }
+
+  .lit-edge::after {
+    content: "";
+    position: absolute;
+    background-color: var(--ember);
+    box-shadow: var(--elev-lit);
+    opacity: 0;
+    transition:
+      opacity var(--t-base) var(--e-move),
+      transform var(--t-base) var(--e-move);
+    pointer-events: none;
+  }
+
+  .lit-edge-left::after {
+    inset: 12% auto 12% 0;
+    width: var(--stroke-lit);
+    border-radius: 0 var(--r-full) var(--r-full) 0;
+    transform: scaleY(0.4);
+  }
+
+  .lit-edge-bottom::after {
+    inset: auto 22% 0 22%;
+    height: var(--stroke-lit);
+    border-radius: var(--r-full) var(--r-full) 0 0;
+    transform: scaleX(0.4);
+  }
+
+  .lit-edge-top::after {
+    inset: 0 22% auto 22%;
+    height: var(--stroke-lit);
+    border-radius: 0 0 var(--r-full) var(--r-full);
+    transform: scaleX(0.4);
+  }
+
+  .lit-edge[data-active="true"]::after {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* ============================================================ CONTROLS ==
+     Buttons and inputs share a focus language: an ember hairline plus a soft
+     ember halo. Never the default browser ring, never blue. */
+  .control-focus:focus-visible {
+    outline: none;
+    border-color: var(--focus-ring);
+    box-shadow: var(--focus-halo);
+  }
+
+  .input {
+    width: 100%;
+    background-color: var(--surface-sunken);
+    color: var(--fg);
+    border: var(--stroke) solid var(--line);
+    border-radius: var(--r-soft);
+    box-shadow: var(--elev-inset);
+    font-family: var(--ff-ui);
+    font-size: var(--fs-base);
+    line-height: 1.4;
+    transition:
+      border-color var(--t-quick) var(--e-move),
+      box-shadow var(--t-quick) var(--e-move),
+      background-color var(--t-quick) var(--e-move);
+  }
+
+  .input::placeholder {
+    color: var(--fg-faint);
+  }
+
+  .input:hover:not(:disabled, :focus) {
+    border-color: var(--line-lit);
+  }
+
+  .input:focus {
+    outline: none;
+    background-color: var(--surface);
+    border-color: var(--focus-ring);
+    box-shadow: var(--elev-inset), var(--focus-halo);
+  }
+
+  .input:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .input[aria-invalid="true"] {
+    border-color: var(--signal);
+  }
+
+  .input[aria-invalid="true"]:focus {
+    box-shadow:
+      var(--elev-inset),
+      0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent);
+  }
+
+  /* ============================================================= AVATARS ==
+     The presence light sits in a notch cut out of the portrait, rather than a
+     dot pasted over the corner. That single detail is most of the difference
+     between "designed" and "assembled". */
+  .avatar {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-full);
+    overflow: hidden;
+    background-color: var(--tint);
+    color: var(--on-tint);
+    user-select: none;
+  }
+
+  .avatar-notched {
+    --notch-r: calc(var(--avatar-size) * 0.3);
+    --notch-c: calc(100% - var(--avatar-size) * 0.13);
+    -webkit-mask-image: radial-gradient(
+      circle at var(--notch-c) var(--notch-c),
+      transparent var(--notch-r),
+      #000 calc(var(--notch-r) + 0.6px)
+    );
+    mask-image: radial-gradient(
+      circle at var(--notch-c) var(--notch-c),
+      transparent var(--notch-r),
+      #000 calc(var(--notch-r) + 0.6px)
+    );
+  }
+
+  /* A ring of light around someone who is here. */
+  .avatar-ring {
+    box-shadow: 0 0 0 var(--stroke) var(--line);
+  }
+
+  .avatar-ring[data-lit="true"] {
+    box-shadow:
+      0 0 0 var(--stroke) var(--ember),
+      var(--elev-lit);
+  }
+
+  /* ============================================================== DIALOG ==
+     Native <dialog> so focus trapping, inert background, Esc and the top layer
+     come from the platform rather than from code we would have to keep correct.
+     @starting-style plus allow-discrete gives enter *and* exit animation with
+     no JavaScript and no animation library. */
+  .dialog {
+    padding: 0;
+    border: none;
+    background: transparent;
+    max-width: min(100vw - 2rem, var(--dialog-w, 34rem));
+    max-height: calc(100dvh - 2rem);
+    overflow: visible;
+  }
+
+  .dialog::backdrop {
+    background-color: var(--scrim);
+    backdrop-filter: blur(6px) saturate(0.85);
+    opacity: 0;
+    transition:
+      opacity var(--t-base) var(--e-enter),
+      display var(--t-base) allow-discrete,
+      overlay var(--t-base) allow-discrete;
+  }
+
+  .dialog[open]::backdrop {
+    opacity: 1;
+  }
+
+  @starting-style {
+    .dialog[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  .dialog-panel {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+    transition:
+      opacity var(--t-base) var(--e-enter),
+      transform var(--t-considered) var(--e-enter);
+  }
+
+  .dialog[open] .dialog-panel {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  @starting-style {
+    .dialog[open] .dialog-panel {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+  }
+
+  /* Closing is driven by a data attribute the component sets before it calls
+     close(), so the exit is seen rather than snapped away. */
+  .dialog[data-closing="true"] .dialog-panel {
+    opacity: 0;
+    transform: translateY(4px) scale(0.99);
+    transition-duration: var(--t-quick);
+    transition-timing-function: var(--e-exit);
+  }
+
+  .dialog[data-closing="true"]::backdrop {
+    opacity: 0;
+    transition-duration: var(--t-quick);
+  }
+
+  /* ================================================================ MENU ==
+     Origin-anchored: the panel grows from the corner nearest its trigger, so it
+     reads as having come from the button rather than appearing from nowhere.
+     Kept mounted and toggled with display, so the same CSS handles exit. */
+  .menu-panel {
+    display: none;
+    opacity: 0;
+    transform: scale(0.96);
+    transform-origin: var(--menu-origin, top left);
+    transition:
+      opacity var(--t-quick) var(--e-exit),
+      transform var(--t-quick) var(--e-exit),
+      display var(--t-quick) allow-discrete;
+  }
+
+  .menu-panel[data-open="true"] {
+    display: block;
+    opacity: 1;
+    transform: scale(1);
+    transition-timing-function: var(--e-enter);
+    transition-duration: var(--t-base);
+  }
+
+  @starting-style {
+    .menu-panel[data-open="true"] {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+
+  .menu-item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.625rem;
+    border-radius: var(--r-inset);
+    text-align: left;
+    color: var(--fg);
+    transition:
+      background-color var(--t-tap) var(--e-move),
+      color var(--t-tap) var(--e-move);
+  }
+
+  .menu-item:hover:not([aria-disabled="true"]),
+  .menu-item:focus-visible {
+    outline: none;
+    background-color: var(--wash-hover);
+    color: var(--fg-loud);
+  }
+
+  .menu-item[data-tone="danger"]:hover,
+  .menu-item[data-tone="danger"]:focus-visible {
+    background-color: color-mix(in oklab, var(--signal) 14%, transparent);
+    color: var(--signal);
+  }
+
+  .menu-item[aria-disabled="true"] {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* =============================================================== TOAST ==
+     Arrives from the edge it lives on, not fading up from nowhere. */
+  .toast {
+    opacity: 0;
+    transform: translateX(12px) scale(0.98);
+    transition:
+      opacity var(--t-base) var(--e-enter),
+      transform var(--t-considered) var(--e-enter);
+  }
+
+  .toast[data-state="open"] {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+
+  .toast[data-state="closing"] {
+    opacity: 0;
+    transform: translateX(12px) scale(0.98);
+    transition-duration: var(--t-quick);
+    transition-timing-function: var(--e-exit);
+  }
+
+  @media (max-width: 40rem) {
+    .toast,
+    .toast[data-state="closing"] {
+      transform: translateY(-12px) scale(0.98);
+    }
+
+    .toast[data-state="open"] {
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  /* The remaining time, drawn as a hairline rather than a countdown number. */
+  .toast-progress {
+    transform-origin: left center;
+    animation: toast-drain linear forwards;
+    animation-duration: var(--toast-duration, 5000ms);
+  }
+
+  @keyframes toast-drain {
+    from {
+      transform: scaleX(1);
+    }
+    to {
+      transform: scaleX(0);
+    }
+  }
+
+  /* ============================================================ LOADING ==
+     Skeletons match the geometry of the content they stand in for. The sheen
+     is a transform on a pseudo-element, so it composites and never repaints
+     the parent. No spinners anywhere in the shell. */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--surface-raised);
+    border-radius: var(--r-inset);
+  }
+
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, var(--ember) 9%, transparent),
+      transparent
+    );
+    animation: skeleton-sheen 1.6s var(--e-move) infinite;
+  }
+
+  @keyframes skeleton-sheen {
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  /* Three embers breathing in sequence. The system's only "working" indicator. */
+  .pulse-ember {
+    animation: pulse-ember 1.1s var(--e-move) infinite;
+  }
+
+  .pulse-ember:nth-child(2) {
+    animation-delay: 0.14s;
+  }
+
+  .pulse-ember:nth-child(3) {
+    animation-delay: 0.28s;
+  }
+
+  @keyframes pulse-ember {
+    0%,
+    100% {
+      opacity: 0.25;
+      transform: scale(0.8);
+    }
+    40% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Motion policy: under reduced motion the looping indicators hold at a
+     legible resting state instead of freezing at 1ms mid-cycle. */
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .skeleton::after {
+      display: none;
+    }
+
+    :root:not([data-motion="full"]) .pulse-ember {
+      opacity: 0.7;
+      transform: none;
+    }
+  }
+
+  [data-motion="off"] .skeleton::after {
+    display: none;
+  }
+
+  [data-motion="off"] .pulse-ember {
+    opacity: 0.7;
+    transform: none;
+  }
+}

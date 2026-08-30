@@ -229,6 +229,57 @@ designed yet.
 
 ---
 
+## The component library
+
+Built in `src/components/ui/` and `src/components/layout/`. Every value comes from a
+token; there is not one literal colour, size, radius or duration below the token layer.
+
+| Component                      | The decision worth knowing                                                                                                                                                                         |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Icon`, `KithMark`             | Drawn, not installed. 24px box, 1.5px stroke, one hand. Home is a room, Games is a die, Couple is two rings, Settings is sliders                                                                   |
+| `Button`                       | 5 variants, 3 sizes, icon-only, loading. `primary` carries a 1px inset top highlight — a lit key, not a coloured rectangle. Label keeps its width while loading                                    |
+| `Input`, `Textarea`            | A _sunken_ surface: the one place light goes away from you. Focus is an ember hairline plus halo, never blue                                                                                       |
+| `Field`                        | Generates the ids and hands back `id` / `aria-describedby` / `aria-invalid` through a render prop, so a control cannot end up unlabelled. Error replaces the hint rather than stacking under it    |
+| `Panel`, `Card`                | Near-square panels are the default; the soft-radius `Card` is the exception you justify. `panel-raised` gets a hairline of light along its top edge                                                |
+| `Avatar`, `AvatarStack`        | The presence light sits in a **notch cut out of the portrait**, not a dot pasted on the corner. Fallback tints hash deterministically from the person's id, drawn from the palette                 |
+| `PresenceEmber`                | lit / cooling / dark, carried by fill-and-ring _shape_ as well as colour, with a text label                                                                                                        |
+| `Badge`, `CountBadge`          | Words are tinted (wash + hairline + tone text). Numbers are filled, mono and tabular so a count does not jump width from 9 to 10                                                                   |
+| `NavItem`, `NavRail`, `NavBar` | Active is a **bar of light on the leading edge**, never a filled pill. Your people are pinned to the bottom of the rail permanently. Unbuilt destinations render as pending, not as links that 404 |
+| `Dialog`                       | Native `<dialog>` + `showModal()`                                                                                                                                                                  |
+| `Menu`                         | Origin-anchored, full keyboard support, stays mounted and toggles `display`                                                                                                                        |
+| `ToastProvider` / `useToast`   | Arrives from its own edge; draining hairline instead of a countdown; anything with an action never auto-dismisses                                                                                  |
+| `Skeleton`, `Pulse`            | Skeletons match the geometry of what is coming. `Pulse` is the only "working" indicator in the system                                                                                              |
+| `EmptyState`                   | A drawn figure in the system's own language, a Fraunces headline, one line, exactly one action                                                                                                     |
+
+### Why no animation library yet
+
+The motion allocation above still stands, but the overlay primitives did not need
+Framer Motion to reach it, so it is not installed.
+
+`Dialog` is a native `<dialog>`. `showModal()` supplies focus containment (including
+from the browser chrome), `inert` on everything behind, Escape, and the top layer —
+correctness we would otherwise be hand-writing and keeping correct forever. Enter _and_
+exit animate in pure CSS via `@starting-style` and `transition-behavior: allow-discrete`,
+which is precisely the gap that used to force a library. `Menu` uses the same technique
+by staying mounted and toggling `display`.
+
+Framer Motion arrives when there is something CSS genuinely cannot do — shared-element
+`layoutId` transitions, list reorder, drag — which is the app shell, not the primitives.
+Installing it now would have bought nothing and cost every user the bytes.
+
+The one honest limitation: `Menu` positions with plain absolute layout inside a relative
+wrapper. That is correct for triggers in headers, toolbars and rails, which is every menu
+in KITH today. A menu that must escape a scroll container is the point to reach for CSS
+anchor positioning — not before.
+
+### Verifying it
+
+`/styleguide` renders every component, state and token on one page, in both modes. It is
+a development tool and returns 404 in production. Regressions in a design system are
+invisible until two things that should match are seen side by side.
+
+---
+
 ## The anti-slop checklist
 
 Run this before merging any component. Any _yes_ is a redesign, not a tweak.

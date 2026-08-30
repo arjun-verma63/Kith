@@ -67,7 +67,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="grain flex min-h-full flex-col bg-ground text-fg">{children}</body>
+      <body className="room grain flex min-h-full flex-col text-fg">{children}</body>
     </html>
   );
 }

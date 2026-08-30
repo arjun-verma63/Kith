@@ -65,6 +65,7 @@
      rounded reads interactive (things you touch). Uniform 12px everywhere is
      the loudest generated-UI tell — do not do it. */
   --r-edge: 2px;
+  --r-inset: 6px; /* nested inside a soft container — menu items, list rows */
   --r-soft: 10px;
   --r-bubble: 14px 14px 14px 3px;
   --r-full: 999px;
@@ -96,6 +97,36 @@
   --e-move: cubic-bezier(0.65, 0, 0.35, 1);
   /* The only overshoot in the system. Licensed to Games and celebration. */
   --e-play: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ----------------------------------------------------------- CONTROLS -- */
+  /* Three control heights, matched to the interface type scale. Anything that
+     accepts a click or a keystroke is one of these — no bespoke heights. */
+  --control-sm: 2rem; /* 32 — dense toolbars, inline actions */
+  --control-md: 2.5rem; /* 40 — the default */
+  --control-lg: 3rem; /* 48 — primary actions, mobile touch targets */
+
+  /* ------------------------------------------------------------ AVATARS -- */
+  /* A person is never rendered at an arbitrary size. */
+  --avatar-2xs: 1.25rem; /* 20 — inline in a sentence */
+  --avatar-xs: 1.75rem; /* 28 — dense lists, stacks */
+  --avatar-sm: 2.25rem; /* 36 — message rows, the rail */
+  --avatar-md: 3rem; /* 48 — list rows, cards */
+  --avatar-lg: 4.5rem; /* 72 — profile peek */
+  --avatar-xl: 7rem; /* 112 — profile page */
+
+  /* ------------------------------------------------------------- LAYERS -- */
+  /* One z-index scale. A magic number in a component is a bug. */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-sticky: 20;
+  --z-rail: 30;
+  --z-overlay: 40;
+  --z-toast: 60;
+  --z-grain: 9999;
+
+  /* ------------------------------------------------------------ STROKES -- */
+  --stroke: 1px;
+  --stroke-lit: 2px;
 
   /* ------------------------------------------------------------ TEXTURE -- */
   --grain-opacity: 0.035;
@@ -129,6 +160,25 @@
   --plum-deep: #6d3746;
   --ice: #7fa6a0; /* 7.2:1 */
   --on-accent: #1a0d08;
+
+  /* Beyond the ground: the dark the room sits in. Used by the vignette and
+     the dialog scrim, never as a surface. */
+  --ground-deep: #070505;
+  --scrim: color-mix(in oklab, #050303 78%, transparent);
+
+  /* Avatar fallback tints. Deterministic per person (hashed from their id), and
+     drawn from the palette so a fallback can never introduce an off-system
+     colour. All carry --fg-loud at well over 7:1. */
+  --tint-1: #3a2320;
+  --tint-2: #3d3116;
+  --tint-3: #253022;
+  --tint-4: #3a1f1c;
+  --tint-5: #33202a;
+  --tint-6: #1f2f2d;
+  --on-tint: #fbf7f2;
+
+  --elev-overlay: 0 4px 8px rgb(0 0 0 / 0.3), 0 24px 56px -12px rgb(0 0 0 / 0.62);
+  --elev-inset: inset 0 1px 2px rgb(0 0 0 / 0.36);
 }
 
 /* ================================================================ DAYLIGHT */
@@ -158,8 +208,21 @@
   --ice: #416b64; /* 5.2:1 */
   --on-accent: #fff6f0;
 
+  --ground-deep: #e0d4c5;
+  --scrim: color-mix(in oklab, #2a1d13 42%, transparent);
+
+  --tint-1: #f3ded6;
+  --tint-2: #f2e6c9;
+  --tint-3: #dfe8d8;
+  --tint-4: #f5dcd8;
+  --tint-5: #eedae0;
+  --tint-6: #d9e6e3;
+  --on-tint: #0e0b0a;
+
   --elev-raised: 0 1px 2px rgb(60 40 25 / 0.1);
   --elev-lifted: 0 2px 4px rgb(60 40 25 / 0.08), 0 12px 28px -8px rgb(60 40 25 / 0.16);
+  --elev-overlay: 0 4px 8px rgb(60 40 25 / 0.1), 0 24px 56px -12px rgb(60 40 25 / 0.22);
+  --elev-inset: inset 0 1px 2px rgb(60 40 25 / 0.12);
   --grain-opacity: 0.05;
   --grain-invert: 1;
 }
@@ -172,6 +235,56 @@
   --presence-lit: var(--ember);
   --presence-cooling: var(--lantern);
   --presence-dark: var(--fg-faint);
+}
+
+/* ======================================================= DERIVED TOKENS ==
+   Composed from the mode palettes above, so they follow Dusk/Daylight without
+   being redefined per mode. Change a base colour and every one of these moves.
+   ========================================================================== */
+:root {
+  /* --- Background system -------------------------------------------------
+     Four depths, plus one lighting layer.
+
+       sunken  inputs, wells, anything you type into
+       ground  the page — the floor of the room
+       surface panels, the rail, the stage
+       raised  menus, dialogs, toasts — things that came to you
+
+     `--bg-room` is the lighting, not a decoration: one soft warm pool near the
+     top and a slight darkening at the base. A single hue at low alpha, which is
+     what separates it from the two-colour SaaS gradient. */
+  --bg-room:
+    radial-gradient(
+      130% 70% at 50% -12%,
+      color-mix(in oklab, var(--ember) 6%, transparent),
+      transparent 62%
+    ),
+    radial-gradient(
+      100% 60% at 50% 118%,
+      color-mix(in oklab, var(--ground-deep) 70%, transparent),
+      transparent 72%
+    );
+
+  /* A hairline that catches light along a top edge. Elevation as illumination. */
+  --edge-lit: linear-gradient(
+    90deg,
+    transparent,
+    var(--line-lit) 18%,
+    var(--line-lit) 82%,
+    transparent
+  );
+
+  /* --- Focus -------------------------------------------------------------
+     An ember halo, never a browser-blue ring. */
+  --focus-ring: var(--ember);
+  --focus-halo: 0 0 0 3px color-mix(in oklab, var(--ember) 22%, transparent);
+
+  /* --- Interaction washes ------------------------------------------------
+     Hover and press states are light on a surface, not a different colour. */
+  --wash-hover: color-mix(in oklab, var(--fg) 6%, transparent);
+  --wash-press: color-mix(in oklab, var(--fg) 10%, transparent);
+  --wash-accent: color-mix(in oklab, var(--ember) 12%, transparent);
+  --wash-accent-strong: color-mix(in oklab, var(--ember) 20%, transparent);
 }
 
 /* ========================================================= REDUCED MOTION */
