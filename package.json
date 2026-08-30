@@ -23,7 +23,8 @@
     "db:reset": "npx supabase db reset",
     "db:diff": "npx supabase db diff -f",
     "db:push": "npx supabase db push",
-    "db:types": "npx supabase gen types typescript --local > src/types/database.ts"
+    "db:types": "npx supabase gen types typescript --local > src/types/database.ts",
+    "db:test": "node supabase/tests/rls.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
@@ -38,6 +39,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

@@ -75,9 +75,9 @@ const eslintConfig = defineConfig([
   },
 
   {
-    // Build and CI scripts. Their stdout is the deliverable, not a stray debug
-    // statement, and they never run inside the application.
-    files: ["scripts/**/*.{mjs,js,ts}"],
+    // Build scripts and the database test suite. Their stdout is the deliverable,
+    // not a stray debug statement, and neither runs inside the application.
+    files: ["scripts/**/*.{mjs,js,ts}", "supabase/tests/**/*.{mjs,js}"],
     rules: {
       "no-console": "off",
     },
