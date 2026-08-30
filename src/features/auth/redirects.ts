@@ -13,6 +13,7 @@ import type { Route } from "next";
 /** Routes that require a session. Prefix match. */
 export const PROTECTED_PREFIXES = [
   "/home",
+  "/u",
   "/friends",
   "/messages",
   "/calls",

@@ -21,10 +21,10 @@ const HREF: Record<AuthIntent, ComponentProps<typeof Link>["href"]> = {
   "request-invite": "/signup",
 };
 
-export interface AuthCtaProps extends Omit<ButtonLinkProps, "href" | "children"> {
+export type AuthCtaProps = Omit<ButtonLinkProps<string>, "href" | "children"> & {
   intent: AuthIntent;
   children: ReactNode;
-}
+};
 
 export function AuthCta({ intent, children, ...props }: AuthCtaProps) {
   return (

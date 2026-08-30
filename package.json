@@ -23,10 +23,12 @@
     "db:reset": "npx supabase db reset",
     "db:diff": "npx supabase db diff -f",
     "db:push": "npx supabase db push",
-    "db:types": "npx supabase gen types typescript --local > src/types/database.ts",
+    "db:types": "node scripts/generate-database-types.mjs",
+    "db:types:check": "node scripts/check-database-types.mjs",
     "db:test": "node supabase/tests/rls.test.mjs",
     "auth:test": "node supabase/tests/auth.test.mjs",
-    "test": "npm run db:test && npm run auth:test"
+    "profile:test": "node supabase/tests/profile.test.mjs",
+    "test": "npm run db:test && npm run auth:test && npm run profile:test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

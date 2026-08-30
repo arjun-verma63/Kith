@@ -7,7 +7,6 @@ import { redirect } from "next/navigation";
 import { clientEnv } from "@/lib/env/client";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { fromAuthError } from "@/lib/supabase/errors";
-import { callRpc } from "@/lib/supabase/rpc";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   forgotPasswordSchema,
@@ -78,7 +77,7 @@ export async function signUpAction(
   // without a valid invitation is the failure that matters; a briefly consumed
   // use of a code is not, and it is handed back below if signup fails.
   let claimedInviteId: string | null = null;
-  const { data: consumed, error: inviteError } = await callRpc(admin, "consume_invite", {
+  const { data: consumed, error: inviteError } = await admin.rpc("consume_invite", {
     p_code_hash: codeHash,
   });
 
@@ -97,12 +96,10 @@ export async function signUpAction(
   // Username uniqueness is enforced by the database, but the signup trigger
   // silently suffixes a clash rather than failing the whole account. Checking
   // here is what turns that into an error the person can act on.
-  const { data: available } = await callRpc(admin, "is_username_available", {
-    p_username: username,
-  });
+  const { data: available } = await admin.rpc("is_username_available", { p_username: username });
 
   if (available === false) {
-    if (claimedInviteId) await callRpc(admin, "release_invite", { p_invite_id: claimedInviteId });
+    if (claimedInviteId) await admin.rpc("release_invite", { p_invite_id: claimedInviteId });
     return fieldError({ username: ["That username is taken."] });
   }
 
@@ -118,12 +115,12 @@ export async function signUpAction(
   });
 
   if (error) {
-    if (claimedInviteId) await callRpc(admin, "release_invite", { p_invite_id: claimedInviteId });
+    if (claimedInviteId) await admin.rpc("release_invite", { p_invite_id: claimedInviteId });
     return { ...fromAuthError(error, "signUp").error, status: "error" } as AuthFormState;
   }
 
   if (data.user && claimedInviteId) {
-    await callRpc(admin, "record_invite_redemption", {
+    await admin.rpc("record_invite_redemption", {
       p_invite_id: claimedInviteId,
       p_user_id: data.user.id,
     });

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link, { type LinkProps } from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 
 import { Icon, type IconName } from "@/components/ui/icon";
@@ -140,18 +140,28 @@ export function Button({
   );
 }
 
-export interface ButtonLinkProps extends Omit<ComponentProps<typeof Link>, "children"> {
+/**
+ * Generic over the route type, which is not incidental.
+ *
+ * `typedRoutes` types `Link` as `Link<RouteType>` and infers the parameter from
+ * the href, which is how a template literal like `/u/${username}` is recognised
+ * as matching the dynamic segment `/u/[username]`. Collapsing that generic —
+ * `ComponentProps<typeof Link>` — pins RouteType to `unknown`, and every
+ * dynamic href in the app stops type-checking against routes that plainly exist.
+ */
+export type ButtonLinkProps<RouteType> = Omit<LinkProps<RouteType>, "children"> & {
   variant?: keyof typeof VARIANT;
   size?: keyof typeof SIZE;
   iconOnly?: boolean;
   icon?: IconName;
   trailingIcon?: IconName;
   fullWidth?: boolean;
+  className?: string | undefined;
   children?: ReactNode;
-}
+};
 
 /** A link that looks like a button. Same clothes, correct element. */
-export function ButtonLink({
+export function ButtonLink<RouteType>({
   variant = "quiet",
   size = "md",
   iconOnly = false,
@@ -161,7 +171,7 @@ export function ButtonLink({
   className,
   children,
   ...props
-}: ButtonLinkProps) {
+}: ButtonLinkProps<RouteType>) {
   const iconPx = size === "lg" ? 20 : 16;
 
   return (

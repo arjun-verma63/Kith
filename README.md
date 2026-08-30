@@ -32,26 +32,28 @@ served from our own origin.
 
 ## Scripts
 
-| Script                 | What it does                                              |
-| ---------------------- | --------------------------------------------------------- |
-| `npm run dev`          | Development server (Turbopack) at `localhost:3000`        |
-| `npm run build`        | Production build                                          |
-| `npm start`            | Serve a production build                                  |
-| `npm run typecheck`    | `tsc --noEmit` against the strict config                  |
-| `npm run lint`         | ESLint, including the architectural import boundaries     |
-| `npm run lint:fix`     | ESLint with autofix                                       |
-| `npm run format`       | Prettier write (sorts Tailwind classes)                   |
-| `npm run format:check` | Prettier check — what CI runs                             |
-| `npm run check`        | `typecheck` + `lint` + `format:check`. Run before pushing |
-| `npm run clean`        | Remove `.next` and the build cache                        |
-| `npm run check:bundle` | Scan the built client bundle for server-only secrets      |
-| `npm run db:start`     | Local Supabase stack (needs Docker)                       |
-| `npm run db:reset`     | Drop and replay every migration                           |
-| `npm run db:diff`      | Capture local schema changes as a migration               |
-| `npm run db:types`     | Regenerate `src/types/database.ts`                        |
-| `npm run test`         | Schema/RLS suite + authentication suite                   |
-| `npm run db:test`      | RLS suite only                                            |
-| `npm run auth:test`    | Redirect rules, validation, invite redemption             |
+| Script                   | What it does                                              |
+| ------------------------ | --------------------------------------------------------- |
+| `npm run dev`            | Development server (Turbopack) at `localhost:3000`        |
+| `npm run build`          | Production build                                          |
+| `npm start`              | Serve a production build                                  |
+| `npm run typecheck`      | `tsc --noEmit` against the strict config                  |
+| `npm run lint`           | ESLint, including the architectural import boundaries     |
+| `npm run lint:fix`       | ESLint with autofix                                       |
+| `npm run format`         | Prettier write (sorts Tailwind classes)                   |
+| `npm run format:check`   | Prettier check — what CI runs                             |
+| `npm run check`          | `typecheck` + `lint` + `format:check`. Run before pushing |
+| `npm run clean`          | Remove `.next` and the build cache                        |
+| `npm run check:bundle`   | Scan the built client bundle for server-only secrets      |
+| `npm run db:start`       | Local Supabase stack (needs Docker)                       |
+| `npm run db:reset`       | Drop and replay every migration                           |
+| `npm run db:diff`        | Capture local schema changes as a migration               |
+| `npm run test`           | All three database/logic suites                           |
+| `npm run db:test`        | Schema and RLS                                            |
+| `npm run auth:test`      | Redirect rules, validation, invite redemption             |
+| `npm run profile:test`   | Presence, profile triggers, storage policies              |
+| `npm run db:types`       | Regenerate `src/types/database.ts` from the migrations    |
+| `npm run db:types:check` | Fail if the generated types have drifted (for CI)         |
 
 ## Structure
 
@@ -257,7 +259,32 @@ so the rules can be tested exhaustively without a database. Two that matter:
 - `?next=` is sanitised by `safeRedirect`. An open redirect is how a phishing
   link gets to wear your domain.
 
-### What is deliberately absent
+#### Profiles
+
+| Route               |                                    |
+| ------------------- | ---------------------------------- |
+| `/u/[username]`     | Anyone's profile. Case-insensitive |
+| `/settings/profile` | Edit your own                      |
+
+Username, display name, avatar, bio, pronouns, accent, status, optional birthday,
+joined date and online state. Three decisions worth knowing:
+
+- **`avatar_path`, not `avatar_url`.** The bucket is private, so avatars are
+  served through short-lived signed URLs minted per request. A column named
+  `avatar_url` invites somebody to store one, and a stored signed URL works for
+  ten minutes and then renders a broken image forever.
+- **Presence is observed, not declared.** `last_seen_at` is pinned by a trigger
+  so a client cannot write its own — only the throttled `touch_last_seen()` can
+  move it. A declared status (`away`, `busy`, `invisible`) always overrides the
+  heartbeat, because a privacy control that leaks is worse than none.
+- **The birthday year is stored but never rendered.** Day and month only.
+
+Avatars are resized to 512px and re-encoded as WebP **in the browser** before
+upload, then go straight to Storage rather than through a server action — the
+bucket policy already restricts the write to the uploader's own folder, so a
+server in the middle adds a round trip and no check.
+
+## What is deliberately absent
 
 - **No 2FA yet.** It is the next phase, and the schema already has the AAL2
   step-up policies waiting for it.
@@ -268,8 +295,9 @@ so the rules can be tested exhaustively without a database. Two that matter:
 
 ## What is next
 
-Two-factor authentication: TOTP enrolment, the AAL2 challenge, recovery codes, and
-wiring the step-up policies the schema already carries. See
+Friends: the request lifecycle, the friends board, blocking and reporting — and
+with them the nav rail, which is waiting on destinations and on your people.
+Then two-factor authentication. See
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full phase plan.
 
 ## Licence

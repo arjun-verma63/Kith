@@ -27,9 +27,17 @@
  */
 
 import { readdirSync, readFileSync } from "node:fs";
+import { register } from "node:module";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { PGlite } from "@electric-sql/pglite";
+
+// Teaches Node the `@/` alias so the suites can import the real application
+// modules rather than a copy that drifts. Registered here because every suite
+// imports this file first, and hooks must be installed before the dynamic
+// imports that use them.
+register(pathToFileURL(join(import.meta.dirname, "alias-loader.mjs")).href);
 
 const MIGRATIONS_DIR = join(process.cwd(), "supabase", "migrations");
 
@@ -83,6 +91,39 @@ const SUPABASE_STUBS = /* sql */ `
 
   alter table realtime.messages enable row level security;
 
+  -- Storage. Approximated closely enough that migration 0012's bucket insert and
+  -- object policies are executed for real, including storage.foldername(), whose
+  -- return shape (a text[] of path segments) is what every avatar policy indexes
+  -- into. A stub that got that wrong would let a broken policy pass.
+  create schema if not exists storage;
+
+  create table storage.buckets (
+    id text primary key,
+    name text not null unique,
+    public boolean not null default false,
+    file_size_limit bigint,
+    allowed_mime_types text[],
+    created_at timestamptz not null default now()
+  );
+
+  create table storage.objects (
+    id uuid primary key default gen_random_uuid(),
+    bucket_id text not null references storage.buckets (id) on delete cascade,
+    name text not null,
+    owner uuid,
+    metadata jsonb,
+    created_at timestamptz not null default now(),
+    unique (bucket_id, name)
+  );
+
+  create or replace function storage.foldername(name text) returns text[]
+  language sql immutable as $fn$
+    select string_to_array(name, '/');
+  $fn$;
+
+  alter table storage.objects enable row level security;
+  alter table storage.objects force row level security;
+
   do $roles$
   begin
     if not exists (select 1 from pg_roles where rolname = 'anon') then
@@ -97,7 +138,7 @@ const SUPABASE_STUBS = /* sql */ `
   end
   $roles$;
 
-  grant usage on schema public, auth, realtime to anon, authenticated, service_role;
+  grant usage on schema public, auth, realtime, storage to anon, authenticated, service_role;
 `;
 
 /**
@@ -123,8 +164,11 @@ const DEFAULT_PRIVILEGES = /* sql */ `
     grant all on functions to anon, authenticated, service_role;
   alter default privileges in schema realtime
     grant all on tables to anon, authenticated, service_role;
+  alter default privileges in schema storage
+    grant all on tables to anon, authenticated, service_role;
 
   grant all on all tables in schema realtime to anon, authenticated, service_role;
+  grant all on all tables in schema storage to anon, authenticated, service_role;
   grant all on all tables in schema auth to service_role;
   grant select on auth.users to authenticated;
 `;
