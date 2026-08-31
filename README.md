@@ -32,28 +32,33 @@ served from our own origin.
 
 ## Scripts
 
-| Script                   | What it does                                              |
-| ------------------------ | --------------------------------------------------------- |
-| `npm run dev`            | Development server (Turbopack) at `localhost:3000`        |
-| `npm run build`          | Production build                                          |
-| `npm start`              | Serve a production build                                  |
-| `npm run typecheck`      | `tsc --noEmit` against the strict config                  |
-| `npm run lint`           | ESLint, including the architectural import boundaries     |
-| `npm run lint:fix`       | ESLint with autofix                                       |
-| `npm run format`         | Prettier write (sorts Tailwind classes)                   |
-| `npm run format:check`   | Prettier check — what CI runs                             |
-| `npm run check`          | `typecheck` + `lint` + `format:check`. Run before pushing |
-| `npm run clean`          | Remove `.next` and the build cache                        |
-| `npm run check:bundle`   | Scan the built client bundle for server-only secrets      |
-| `npm run db:start`       | Local Supabase stack (needs Docker)                       |
-| `npm run db:reset`       | Drop and replay every migration                           |
-| `npm run db:diff`        | Capture local schema changes as a migration               |
-| `npm run test`           | All three database/logic suites                           |
-| `npm run db:test`        | Schema and RLS                                            |
-| `npm run auth:test`      | Redirect rules, validation, invite redemption             |
-| `npm run profile:test`   | Presence, profile triggers, storage policies              |
-| `npm run db:types`       | Regenerate `src/types/database.ts` from the migrations    |
-| `npm run db:types:check` | Fail if the generated types have drifted (for CI)         |
+| Script                       | What it does                                              |
+| ---------------------------- | --------------------------------------------------------- |
+| `npm run dev`                | Development server (Turbopack) at `localhost:3000`        |
+| `npm run build`              | Production build                                          |
+| `npm start`                  | Serve a production build                                  |
+| `npm run typecheck`          | `tsc --noEmit` against the strict config                  |
+| `npm run lint`               | ESLint, including the architectural import boundaries     |
+| `npm run lint:fix`           | ESLint with autofix                                       |
+| `npm run format`             | Prettier write (sorts Tailwind classes)                   |
+| `npm run format:check`       | Prettier check — what CI runs                             |
+| `npm run check`              | `typecheck` + `lint` + `format:check`. Run before pushing |
+| `npm run clean`              | Remove `.next` and the build cache                        |
+| `npm run check:bundle`       | Scan the built client bundle for server-only secrets      |
+| `npm run db:start`           | Local Supabase stack (needs Docker)                       |
+| `npm run db:reset`           | Drop and replay every migration                           |
+| `npm run db:diff`            | Capture local schema changes as a migration               |
+| `npm run test`               | Every suite below, in order                               |
+| `npm run db:test`            | Schema and RLS                                            |
+| `npm run auth:test`          | Redirect rules, validation, invite redemption             |
+| `npm run profile:test`       | Profile triggers, username rules, storage policies        |
+| `npm run friends:test`       | Requests, friendships, the constraints behind them        |
+| `npm run presence:test`      | The presence resolution rule and its channel policy       |
+| `npm run messages:test`      | Membership, pagination, reactions, sanitisation           |
+| `npm run notifications:test` | Fan-out, collapsing, read state                           |
+| `npm run webrtc:test`        | Two real peers connecting, and perfect negotiation        |
+| `npm run db:types`           | Regenerate `src/types/database.ts` from the migrations    |
+| `npm run db:types:check`     | Fail if the generated types have drifted (for CI)         |
 
 ## Structure
 
@@ -78,6 +83,7 @@ src/
 │   ├── env/              Zod-validated environment, split client / server
 │   ├── server/           server-only modules. See lib/server/README.md
 │   ├── utils/            cn() and friends
+│   ├── webrtc/           Peer connection, media, signalling contract. No React.
 │   ├── result.ts         Typed Result<T, E> for anything that can fail
 │   └── constants.ts      Brand and site constants
 │

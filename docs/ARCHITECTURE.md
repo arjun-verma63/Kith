@@ -153,10 +153,19 @@ throttled to a fixed tick rate. This is designed in, not retrofitted.
 
 ## 7. WebRTC
 
+> Implemented as of the WebRTC foundation phase. **[docs/WEBRTC.md](WEBRTC.md) is the
+> detailed reference**; this section is the summary and records where the plan moved.
+
 **Full mesh**, which is optimal for 1:1 and sound to about four participants — upstream
 bandwidth and CPU grow linearly with peers. Group video is capped at 4 with an explicit
-UI limit. The escape hatch is an SFU (LiveKit or mediasoup); `features/calls/peer.ts`
-exists so that swap does not touch UI.
+UI limit. The escape hatch is an SFU (LiveKit or mediasoup); the negotiation code is
+isolated in `lib/webrtc/peer.ts` so that swap does not touch UI.
+
+The plan put `peer.ts` under `features/calls/`. It ended up in `lib/webrtc/` instead,
+because a module that imports nothing from React, Supabase or the DOM can be run against
+a real native WebRTC stack in Node — which is what makes "two peers can connect" a test
+rather than a claim. `features/calls/` keeps the React hooks and the one file that knows
+signalling goes over Supabase.
 
 Signaling: create the `calls` row via a server action → trigger broadcasts
 `call.incoming` to `user:{callee}` → on accept both join `call:{id}` → **perfect
@@ -164,7 +173,8 @@ negotiation** with the lower user id as the impolite peer (deterministic, no coi
 This is what stops simultaneous renegotiation — someone starting a screen share exactly
 as someone else toggles video — from deadlocking the connection.
 
-**TURN is required, not optional.** A meaningful share of real pairs (symmetric NAT,
+**TURN is required, not optional** — though not yet built (STUN only, by phase
+instruction; `buildIceConfiguration()` already takes the relay list). A meaningful share of real pairs (symmetric NAT,
 carrier-grade NAT on mobile, restrictive corporate networks) cannot connect without a
 relay, and TURN over TCP/443 is what survives hostile firewalls. This is the one
 component that is neither free nor serverless: managed (Cloudflare) or self-hosted
@@ -174,7 +184,10 @@ Screen share adds a second video track and renegotiates, rather than replacing t
 camera track. Mute and camera state are broadcast events, not inferred from track state.
 Connection quality comes from `pc.getStats()` polled every ~2s; `iceConnectionState`
 `failed` triggers an ICE restart before the call is declared dead. An explicit state
-machine lives in `features/calls/machine.ts` — ad-hoc booleans are how call features rot.
+machine lives in `lib/webrtc/peer.ts` (`new → connecting → connected → reconnecting →
+failed → closed`) — ad-hoc booleans are how call features rot. `disconnected` maps to
+`reconnecting` with a grace period rather than to failure: it is routinely transient, and
+treating it as fatal would end good calls on every network handover.
 
 ## 8. Games
 

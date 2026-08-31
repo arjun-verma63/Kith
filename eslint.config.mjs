@@ -14,7 +14,15 @@ const noDeepRelative = {
 };
 
 /** Every vertical slice under src/features. Adding one means adding it here. */
-const FEATURE_SLICES = ["auth", "friends", "landing", "messages", "notifications", "profile"];
+const FEATURE_SLICES = [
+  "auth",
+  "calls",
+  "friends",
+  "landing",
+  "messages",
+  "notifications",
+  "profile",
+];
 
 const noFeatureImports = {
   group: ["@/features", "@/features/*"],
