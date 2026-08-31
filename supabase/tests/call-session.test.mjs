@@ -344,6 +344,57 @@ section("Mute");
 }
 
 /* ==========================================================================
+ * 4b · Screen sharing, between the two sessions
+ *
+ * The screen itself cannot be captured in Node, so what is checked here is the
+ * half that has to be right for the far end to render anything: the announcement
+ * travelling over real signalling, and the record kept for a late joiner.
+ * `screen-share.test.mjs` drives the capture side against a fake browser.
+ * ========================================================================== */
+
+section("Screen sharing");
+
+{
+  adaPeer.sendMediaState({ micEnabled: false, cameraEnabled: false, screenSharing: true });
+  await waitFor(() => remoteMedia.rafa?.screenSharing === true, 3000);
+
+  eq("Rafa is told Ada started sharing", remoteMedia.rafa?.screenSharing, true);
+  eq("without disturbing what he knows about her microphone", remoteMedia.rafa?.micEnabled, false);
+  eq("and no camera is claimed", remoteMedia.rafa?.cameraEnabled, false);
+
+  await asUser(db, ada, "select public.set_call_media_state($1, $2::jsonb)", [
+    callId,
+    JSON.stringify({ micEnabled: false, cameraEnabled: false, screenSharing: true }),
+  ]);
+
+  const { rows } = await asService(
+    db,
+    "select media_state from public.call_participants where call_id = $1 and user_id = $2",
+    [callId, ada],
+  );
+  eq("the whole state is recorded, not a patch", rows[0].media_state, {
+    micEnabled: false,
+    cameraEnabled: false,
+    screenSharing: true,
+  });
+
+  // The other direction, so the flag is not accidentally one-way.
+  rafaPeer.sendMediaState({ micEnabled: true, cameraEnabled: false, screenSharing: true });
+  await waitFor(() => remoteMedia.ada?.screenSharing === true, 3000);
+  eq("and it travels the other way too", remoteMedia.ada?.screenSharing, true);
+
+  adaPeer.sendMediaState({ micEnabled: false, cameraEnabled: false, screenSharing: false });
+  await waitFor(() => remoteMedia.rafa?.screenSharing === false, 3000);
+  eq("stopping is announced as well", remoteMedia.rafa?.screenSharing, false);
+
+  const { rows: sent } = await asService(
+    db,
+    "select count(*)::int as n from realtime.sent where payload::text like '%screenSharing%'",
+  );
+  eq("and none of this touched the database's broadcast log", sent[0].n, 0);
+}
+
+/* ==========================================================================
  * 5 · Nothing about the audio is stored
  * ========================================================================== */
 

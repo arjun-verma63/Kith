@@ -34,8 +34,9 @@
     "notifications:test": "node supabase/tests/notifications.test.mjs",
     "calls:test": "node supabase/tests/calls.test.mjs",
     "call-session:test": "node supabase/tests/call-session.test.mjs",
+    "screen-share:test": "node supabase/tests/screen-share.test.mjs",
     "webrtc:test": "node supabase/tests/webrtc.test.mjs",
-    "test": "npm run db:test && npm run auth:test && npm run profile:test && npm run friends:test && npm run presence:test && npm run messages:test && npm run notifications:test && npm run webrtc:test && npm run calls:test && npm run call-session:test"
+    "test": "npm run db:test && npm run auth:test && npm run profile:test && npm run friends:test && npm run presence:test && npm run messages:test && npm run notifications:test && npm run webrtc:test && npm run calls:test && npm run call-session:test && npm run screen-share:test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

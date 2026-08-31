@@ -59,6 +59,7 @@ served from our own origin.
 | `npm run webrtc:test`        | Two real peers connecting, and perfect negotiation        |
 | `npm run calls:test`         | The call lifecycle and who may do what to it              |
 | `npm run call-session:test`  | Two sessions, one call, end to end                        |
+| `npm run screen-share:test`  | Capture, stopping, and the one-sender rule                |
 | `npm run db:types`           | Regenerate `src/types/database.ts` from the migrations    |
 | `npm run db:types:check`     | Fail if the generated types have drifted (for CI)         |
 

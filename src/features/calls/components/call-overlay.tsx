@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -202,8 +202,27 @@ function RoundButton({
 /* -------------------------------------------------------------------------- */
 
 function ConnectedBar() {
-  const { call, connection, micEnabled, remoteMicEnabled, toggleMic, hangUp, busy } = useCall();
+  const {
+    call,
+    connection,
+    micEnabled,
+    screenSharing,
+    screenShareSupported,
+    localScreenStream,
+    remoteMicEnabled,
+    remoteScreenSharing,
+    remoteStream,
+    toggleMic,
+    toggleScreenShare,
+    hangUp,
+    busy,
+  } = useCall();
   const elapsed = useElapsed(call?.answeredAt ?? null);
+
+  // Detected here rather than inside the stage: the panel has to be open before
+  // the stage can render anything, and a video track can arrive before the
+  // broadcast announcing it — renegotiation and a broadcast are different paths.
+  const hasRemoteVideo = useHasVideoTrack(remoteStream);
 
   if (!call) return null;
 
@@ -211,84 +230,342 @@ function ConnectedBar() {
   const status = describeConnection(connection);
   const unsettled = connection !== "connected";
 
+  // The panel grows when there is something to look at. A voice call is a strip;
+  // a shared screen needs room, and the same element becoming bigger reads as one
+  // call changing rather than two surfaces swapping.
+  const showing = screenSharing || remoteScreenSharing || hasRemoteVideo;
+
   return (
     <div
       role="region"
       aria-label={`Call with ${name}`}
       className={cn(
         "fixed inset-x-0 bottom-0 z-[var(--z-overlay)] sm:inset-x-auto sm:right-6 sm:bottom-6",
-        "sm:w-[22rem]",
+        "transition-[width] duration-[var(--t-settle)]",
+        showing ? "sm:w-[30rem]" : "sm:w-[22rem]",
       )}
     >
-      <div className="panel panel-overlay lit-edge flex items-center gap-3 p-3 sm:rounded-soft">
-        <span className="relative shrink-0">
-          <Avatar
-            name={name}
-            seed={call.peer?.id ?? call.id}
-            size="sm"
-            src={call.peer?.avatarUrl ?? null}
+      <div className="panel panel-overlay lit-edge flex flex-col overflow-hidden sm:rounded-soft">
+        {showing ? (
+          <ScreenStage
+            localStream={localScreenStream}
+            remoteStream={remoteStream}
+            sharing={screenSharing}
+            remoteSharing={remoteScreenSharing}
+            hasRemoteVideo={hasRemoteVideo}
+            peerName={name}
+            onStop={() => void toggleScreenShare()}
           />
-          {!remoteMicEnabled ? (
-            <span
-              aria-hidden="true"
-              className="absolute -right-1 -bottom-1 grid size-4 place-items-center rounded-full bg-raised ring-2 ring-[var(--panel-overlay-bg,var(--bg-raised))]"
-            >
-              <Icon name="micOff" size={9} className="text-signal" />
-            </span>
-          ) : null}
-        </span>
+        ) : null}
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm text-fg-loud">{name}</span>
-          <span
+        <div className="flex items-center gap-3 p-3">
+          <span className="relative shrink-0">
+            <Avatar
+              name={name}
+              seed={call.peer?.id ?? call.id}
+              size="sm"
+              src={call.peer?.avatarUrl ?? null}
+            />
+            {!remoteMicEnabled ? (
+              <span
+                aria-hidden="true"
+                className="absolute -right-1 -bottom-1 grid size-4 place-items-center rounded-full bg-raised ring-2 ring-[var(--panel-overlay-bg,var(--bg-raised))]"
+              >
+                <Icon name="micOff" size={9} className="text-signal" />
+              </span>
+            ) : null}
+          </span>
+
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-sm text-fg-loud">{name}</span>
+            <span
+              className={cn(
+                "numeric text-2xs",
+                unsettled ? "text-signal" : "text-fg-faint",
+                connection === "reconnecting" && "animate-pulse",
+              )}
+            >
+              {/* The timer only runs once there is a call to time. While it is
+                still connecting, saying so is more use than 0:00. */}
+              {unsettled ? status : elapsed}
+              {!remoteMicEnabled && !unsettled ? " · muted" : ""}
+              {remoteScreenSharing && !unsettled ? " · sharing" : ""}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={toggleMic}
+            aria-label={micEnabled ? "Mute" : "Unmute"}
+            aria-pressed={!micEnabled}
+            title={micEnabled ? "Mute" : "Unmute"}
             className={cn(
-              "numeric text-2xs",
-              unsettled ? "text-signal" : "text-fg-faint",
-              connection === "reconnecting" && "animate-pulse",
+              "control-focus grid size-9 shrink-0 place-items-center rounded-full border transition-colors",
+              "duration-[var(--t-quick)]",
+              micEnabled
+                ? "border-line bg-raised text-fg hover:border-line-lit"
+                : "border-signal bg-signal text-on-accent",
             )}
           >
-            {/* The timer only runs once there is a call to time. While it is
-                still connecting, saying so is more use than 0:00. */}
-            {unsettled ? status : elapsed}
-            {!remoteMicEnabled && !unsettled ? " · muted" : ""}
-          </span>
+            <Icon name={micEnabled ? "mic" : "micOff"} size={16} />
+          </button>
+
+          {/* Hidden, not disabled, where the browser has no getDisplayMedia — iOS,
+            embedded webviews, insecure origins. A control that can never work is
+            not a control. */}
+          {screenShareSupported ? (
+            <button
+              type="button"
+              onClick={() => void toggleScreenShare()}
+              aria-label={screenSharing ? "Stop sharing your screen" : "Share your screen"}
+              aria-pressed={screenSharing}
+              title={screenSharing ? "Stop sharing your screen" : "Share your screen"}
+              className={cn(
+                "control-focus grid size-9 shrink-0 place-items-center rounded-full border",
+                "transition-colors duration-[var(--t-quick)]",
+                screenSharing
+                  ? "border-ember bg-ember text-on-accent"
+                  : "border-line bg-raised text-fg hover:border-line-lit hover:text-ember",
+              )}
+            >
+              <Icon name="screen" size={16} />
+            </button>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => void hangUp()}
+            disabled={busy}
+            aria-label="Hang up"
+            title="Hang up"
+            className={cn(
+              "control-focus grid size-9 shrink-0 place-items-center rounded-full",
+              "bg-signal text-on-accent transition-transform duration-[var(--t-quick)]",
+              "hover:scale-105 active:scale-95 disabled:opacity-50",
+            )}
+          >
+            <Icon name="calls" size={16} className="rotate-[135deg]" />
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={toggleMic}
-          aria-label={micEnabled ? "Mute" : "Unmute"}
-          aria-pressed={!micEnabled}
-          title={micEnabled ? "Mute" : "Unmute"}
-          className={cn(
-            "control-focus grid size-9 shrink-0 place-items-center rounded-full border transition-colors",
-            "duration-[var(--t-quick)]",
-            micEnabled
-              ? "border-line bg-raised text-fg hover:border-line-lit"
-              : "border-signal bg-signal text-on-accent",
-          )}
-        >
-          <Icon name={micEnabled ? "mic" : "micOff"} size={16} />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => void hangUp()}
-          disabled={busy}
-          aria-label="Hang up"
-          title="Hang up"
-          className={cn(
-            "control-focus grid size-9 shrink-0 place-items-center rounded-full",
-            "bg-signal text-on-accent transition-transform duration-[var(--t-quick)]",
-            "hover:scale-105 active:scale-95 disabled:opacity-50",
-          )}
-        >
-          <Icon name="calls" size={16} className="rotate-[135deg]" />
-        </button>
       </div>
     </div>
   );
 }
+
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The screen, whoever is sharing it.
+ *
+ * Remote takes precedence when both are: what somebody else is showing you is
+ * the thing you cannot see any other way, whereas your own screen is behind the
+ * browser window. Your share still gets its own strip so you are never sharing
+ * without being told.
+ */
+function ScreenStage({
+  localStream,
+  remoteStream,
+  sharing,
+  remoteSharing,
+  hasRemoteVideo,
+  peerName,
+  onStop,
+}: {
+  localStream: MediaStream | null;
+  remoteStream: MediaStream | null;
+  sharing: boolean;
+  remoteSharing: boolean;
+  hasRemoteVideo: boolean;
+  peerName: string;
+  onStop: () => void;
+}) {
+  // Rendering follows the TRACK; the label follows the announcement. Either one
+  // alone would produce a wrong frame — a black rectangle when the announcement
+  // is stale, or nothing at all when it is late.
+  const showRemote = hasRemoteVideo || remoteSharing;
+
+  return (
+    <div className="flex flex-col">
+      {showRemote ? (
+        <ScreenVideo
+          stream={remoteStream}
+          label={`${peerName}'s screen`}
+          waiting={!hasRemoteVideo}
+        />
+      ) : null}
+
+      {sharing ? (
+        <div
+          className={cn(
+            "flex items-center gap-2.5 border-b border-line px-3 py-2",
+            // Ember, not a neutral. Sharing a screen is the one state in KITH
+            // where forgetting you are in it has real consequences, so it is
+            // coloured like something that is happening rather than something
+            // that is available.
+            "bg-[var(--wash-accent)]",
+          )}
+        >
+          <span className="relative grid size-5 shrink-0 place-items-center">
+            <span className="pulse-ember absolute inset-0 rounded-full" aria-hidden="true" />
+            <Icon name="screen" size={13} className="relative text-ember" />
+          </span>
+
+          <span className="min-w-0 flex-1 text-2xs text-fg-loud">
+            You&rsquo;re sharing your screen
+          </span>
+
+          <button
+            type="button"
+            onClick={onStop}
+            className="control-focus rounded-edge text-2xs font-medium text-ember hover:underline"
+          >
+            Stop
+          </button>
+        </div>
+      ) : null}
+
+      {/* Your own screen, only when theirs is not already filling the stage.
+          Seeing what you are actually showing is the point — a preview is how
+          people notice they picked the wrong window. */}
+      {sharing && !showRemote ? (
+        <ScreenVideo stream={localStream} label="Your screen" muted />
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * One video surface.
+ *
+ * `muted` on every one of these: the audio arrives through the `<audio>` element
+ * that is mounted for the whole call, and a second element playing the same
+ * stream would double it.
+ */
+function ScreenVideo({
+  stream,
+  label,
+  muted = true,
+  waiting = false,
+}: {
+  stream: MediaStream | null;
+  label: string;
+  muted?: boolean;
+  waiting?: boolean;
+}) {
+  const element = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = element.current;
+    if (!video) return;
+
+    video.srcObject = stream;
+    if (stream) void video.play().catch(() => {});
+
+    return () => {
+      // Released on unmount so the decoder is not left holding a stream that is
+      // no longer on screen.
+      video.srcObject = null;
+    };
+  }, [stream]);
+
+  return (
+    <div className="relative aspect-video w-full overflow-hidden bg-sunken">
+      <video
+        ref={element}
+        autoPlay
+        playsInline
+        muted={muted}
+        aria-label={label}
+        // `contain`, never `cover`. A shared screen cropped to fit is a shared
+        // screen with the edges cut off, which is where the toolbars live.
+        className="size-full object-contain"
+      />
+
+      {waiting ? (
+        <div className="absolute inset-0 grid place-items-center">
+          <span className="text-2xs text-fg-faint">Waiting for the screen&hellip;</span>
+        </div>
+      ) : null}
+
+      <span className="absolute bottom-1.5 left-2 rounded-edge bg-[var(--wash-scrim)] px-1.5 py-0.5 text-[0.625rem] text-fg-dim backdrop-blur-sm">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Whether a stream is carrying live video right now.
+ *
+ * Two things make this less obvious than it looks.
+ *
+ * `remoteStream` keeps the same object identity when a track is added to it —
+ * the browser mutates the stream rather than replacing it — so React never
+ * re-renders on its own when a screen share starts.
+ *
+ * And stopping a share does NOT end the remote track. `replaceTrack(sender,
+ * null)` leaves the transceiver in place and the receiver's track alive but
+ * MUTED; `ended` only fires when the connection goes away. Watching for `ended`
+ * alone would leave a frozen last frame on screen for the rest of the call.
+ * So the test is live AND unmuted, and `mute`/`unmute` are the events that
+ * matter most.
+ *
+ * `useSyncExternalStore` rather than an effect: this is a subscription to
+ * something outside React, which is exactly what it is for, and it renders
+ * correctly on the server (where there is no stream) without a mismatch.
+ */
+function useHasVideoTrack(stream: MediaStream | null): boolean {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (!stream) return () => {};
+
+      // Tracks arriving later need the same listeners, and `subscribe` does not
+      // re-run for them — so attaching is repeated whenever the set changes.
+      const listening = new Set<MediaStreamTrack>();
+
+      const attach = () => {
+        for (const track of stream.getVideoTracks()) {
+          if (listening.has(track)) continue;
+          listening.add(track);
+          track.addEventListener("mute", onChange);
+          track.addEventListener("unmute", onChange);
+          track.addEventListener("ended", onChange);
+        }
+      };
+
+      const handle = () => {
+        attach();
+        onChange();
+      };
+
+      attach();
+      stream.addEventListener("addtrack", handle);
+      stream.addEventListener("removetrack", handle);
+
+      return () => {
+        stream.removeEventListener("addtrack", handle);
+        stream.removeEventListener("removetrack", handle);
+        for (const track of listening) {
+          track.removeEventListener("mute", onChange);
+          track.removeEventListener("unmute", onChange);
+          track.removeEventListener("ended", onChange);
+        }
+      };
+    },
+    [stream],
+  );
+
+  const snapshot = useCallback(
+    () => stream?.getVideoTracks().some((t) => t.readyState === "live" && !t.muted) ?? false,
+    [stream],
+  );
+
+  return useSyncExternalStore(subscribe, snapshot, returnFalse);
+}
+
+const returnFalse = () => false;
+
+/* -------------------------------------------------------------------------- */
 
 /** Ticks the call timer. Derived from the answer time, never accumulated. */
 function useElapsed(answeredAt: string | null): string {

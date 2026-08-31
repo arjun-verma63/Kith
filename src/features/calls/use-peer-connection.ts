@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { createSupabaseSignaling } from "@/features/calls/supabase-signaling";
 import { KithPeer, type PeerState } from "@/lib/webrtc/peer";
+import { VideoPublisher } from "@/lib/webrtc/video";
 import {
   DEFAULT_MEDIA_STATE,
   type HangupReason,
@@ -67,7 +68,7 @@ export function usePeerConnection(options: UsePeerConnectionOptions): PeerConnec
   const [error, setError] = useState<Error | null>(null);
 
   const peerRef = useRef<KithPeer | null>(null);
-  const videoSender = useRef<RTCRtpSender | null>(null);
+  const publisher = useRef<VideoPublisher | null>(null);
   const publishedStream = useRef<MediaStream | null>(null);
 
   const hangupHandler = useRef(onHangup);
@@ -102,10 +103,11 @@ export function usePeerConnection(options: UsePeerConnectionOptions): PeerConnec
     });
 
     peerRef.current = peer;
+    publisher.current = new VideoPublisher(peer);
 
     return () => {
       peerRef.current = null;
-      videoSender.current = null;
+      publisher.current = null;
       publishedStream.current = null;
       peer.close();
       void transport.close();
@@ -126,31 +128,29 @@ export function usePeerConnection(options: UsePeerConnectionOptions): PeerConnec
 
     publishedStream.current = localStream;
     for (const track of localStream.getTracks()) {
-      const sender = peer.addTrack(track, localStream);
-      if (track.kind === "video") videoSender.current = sender;
+      // Video, if the stream already has any, goes through the publisher so
+      // there is one place that owns the video sender.
+      if (track.kind === "video") {
+        void publisher.current?.publish(track, localStream);
+        continue;
+      }
+      peer.addTrack(track, localStream);
     }
   }, [localStream, enabled]);
 
   /**
-   * Camera toggles and device switches.
+   * Screen shares, camera toggles and device switches all come through here.
    *
-   * `replaceTrack` when a video sender already exists; `addTrack` only the first
-   * time, when the media line has to be created. The distinction matters — going
-   * through `addTrack` every time renegotiates the session on every camera
-   * toggle, and the other side sees a black frame while it does.
+   * The replace-or-add rule lives in `VideoPublisher`, out of React, because it
+   * is the piece that decides whether a switch costs a renegotiation — and it is
+   * testable there.
    */
   const setVideoTrack = useCallback(async (track: MediaStreamTrack | null) => {
-    const peer = peerRef.current;
-    if (!peer) return;
-
-    if (videoSender.current) {
-      await peer.replaceTrack(videoSender.current, track);
-      return;
-    }
-
-    if (!track) return;
+    if (!peerRef.current || !publisher.current) return;
+    // Grouped with the audio already being sent, so the far end gets one stream
+    // carrying both rather than two it has to correlate.
     const stream = publishedStream.current ?? new MediaStream();
-    videoSender.current = peer.addTrack(track, stream);
+    await publisher.current.publish(track, stream);
   }, []);
 
   const hangUp = useCallback((reason: HangupReason = "hung_up") => {

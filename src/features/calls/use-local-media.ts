@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import {
   LocalMedia,
   MediaError,
+  isDisplayMediaSupported,
   listDevices,
   type DeviceInfo,
   type MediaKind,
@@ -44,6 +45,22 @@ export interface LocalMediaApi {
    */
   hasStream: () => boolean;
   media: MediaState;
+  /**
+   * The live media state, readable immediately after an await.
+   *
+   * `media` is React state and lags by a render, so a callback that awaits a
+   * toggle and then reads it publishes what was true before. This reads the
+   * controller, which is the authority.
+   */
+  getState: () => MediaState;
+  /** The screen being shared, for the local preview. Null when not sharing. */
+  displayStream: MediaStream | null;
+  /**
+   * False where `getDisplayMedia` does not exist — iOS, embedded webviews, any
+   * insecure origin. The control is hidden rather than disabled: a button that
+   * can never work is not a button.
+   */
+  screenShareSupported: boolean;
   error: MediaError | null;
   /** True while the camera is being acquired — the toggle should show it. */
   busy: boolean;
@@ -52,9 +69,20 @@ export interface LocalMediaApi {
   stop: () => void;
   toggleMic: () => void;
   toggleCamera: () => Promise<void>;
+  /**
+   * Must be called straight out of a click handler.
+   *
+   * `getDisplayMedia` needs transient activation, and awaiting anything first
+   * spends it — so this does no server work before the picker opens.
+   */
+  toggleScreenShare: () => Promise<void>;
   switchDevice: (kind: MediaKind, deviceId: string) => Promise<void>;
   refreshDevices: () => Promise<void>;
 }
+
+/** Support cannot change during a session, so there is nothing to subscribe to. */
+const subscribeToNothing = () => () => {};
+const returnFalse = () => false;
 
 export function useLocalMedia(options: UseLocalMediaOptions = {}): LocalMediaApi {
   const { autoStart = false, video = false, onVideoTrack } = options;
@@ -64,6 +92,22 @@ export function useLocalMedia(options: UseLocalMediaOptions = {}): LocalMediaApi
   const [error, setError] = useState<MediaError | null>(null);
   const [busy, setBusy] = useState(false);
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
+  const [displayStream, setDisplayStream] = useState<MediaStream | null>(null);
+
+  /**
+   * Feature detection that survives hydration.
+   *
+   * A plain `isDisplayMediaSupported()` call would answer false on the server and
+   * true in the browser, and the overlay IS server-rendered — somebody who
+   * refreshes mid-call gets it from the server. `useSyncExternalStore` is the
+   * mechanism for exactly this: a server snapshot, a client snapshot, and React
+   * reconciling them without a mismatch warning.
+   */
+  const screenShareSupported = useSyncExternalStore(
+    subscribeToNothing,
+    isDisplayMediaSupported,
+    returnFalse,
+  );
 
   const controller = useRef<LocalMedia | null>(null);
   if (controller.current === null) controller.current = new LocalMedia();
@@ -78,7 +122,13 @@ export function useLocalMedia(options: UseLocalMediaOptions = {}): LocalMediaApi
     const local = controller.current;
     if (!local) return;
 
-    local.onStateChange = (next) => setMedia(next);
+    local.onStateChange = (next) => {
+      setMedia(next);
+      // Covers the share ending from outside this component — the browser's own
+      // stop bar, or the window being closed. The controller is the authority on
+      // whether a screen is still being captured.
+      setDisplayStream(next.screenSharing ? local.getDisplayStream() : null);
+    };
     local.onVideoTrack = (track) => videoTrackHandler.current?.(track);
 
     return () => {
@@ -113,15 +163,52 @@ export function useLocalMedia(options: UseLocalMediaOptions = {}): LocalMediaApi
 
   const hasStream = useCallback(() => controller.current?.getStream() !== null, []);
 
+  const getState = useCallback(
+    () => controller.current?.getState() ?? { ...DEFAULT_MEDIA_STATE, micEnabled: false },
+    [],
+  );
+
   const stop = useCallback(() => {
     controller.current?.stop();
     setStream(null);
+    setDisplayStream(null);
   }, []);
 
   const toggleMic = useCallback(() => {
     const local = controller.current;
     if (!local) return;
     local.setMicEnabled(!local.getState().micEnabled);
+  }, []);
+
+  /**
+   * Start or stop sharing.
+   *
+   * The state is read from the controller rather than from React state, because
+   * the browser's own "Stop sharing" bar can end a share without this component
+   * doing anything — and a toggle that reads a stale render would then try to
+   * stop a share that had already stopped.
+   */
+  const toggleScreenShare = useCallback(async () => {
+    const local = controller.current;
+    if (!local) return;
+
+    if (local.isScreenSharing()) {
+      await local.stopScreenShare();
+      setDisplayStream(null);
+      return;
+    }
+
+    setError(null);
+    try {
+      // No await before this line: the picker needs the click's activation.
+      await local.startScreenShare();
+      setDisplayStream(local.getDisplayStream());
+    } catch (thrown) {
+      const failure = toError(thrown);
+      // Changing your mind in the picker is not an error and gets no banner.
+      if (failure.kind !== "cancelled") setError(failure);
+      setDisplayStream(null);
+    }
   }, []);
 
   const toggleCamera = useCallback(async () => {
@@ -181,6 +268,9 @@ export function useLocalMedia(options: UseLocalMediaOptions = {}): LocalMediaApi
     stream,
     hasStream,
     media,
+    getState,
+    displayStream,
+    screenShareSupported,
     error,
     busy,
     devices,
@@ -188,6 +278,7 @@ export function useLocalMedia(options: UseLocalMediaOptions = {}): LocalMediaApi
     stop,
     toggleMic,
     toggleCamera,
+    toggleScreenShare,
     switchDevice,
     refreshDevices,
   };

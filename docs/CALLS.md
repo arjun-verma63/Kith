@@ -192,7 +192,106 @@ does the opposite, and [WEBRTC.md §6](WEBRTC.md) explains why.)
 
 ---
 
-## 8. The interface
+## 8. Screen sharing
+
+Audio only means the microphone. A screen is video, and it is the only video
+KITH sends.
+
+### One sender, several sources
+
+A participant sends at most one video stream, and during a call its source
+changes: nothing, then a screen, then nothing again. Every one of those switches
+travels on the **same sender** (`lib/webrtc/video.ts`).
+
+That rule is what makes them free. `addTrack` creates a media line and fires
+`negotiationneeded` — an offer, an answer, and a gap of black frames on the far
+end. `replaceTrack` swaps the source in place with no SDP at all. So `addTrack`
+happens exactly once, the first time there is any video on the call, and
+everything after it is `replaceTrack` — including `replaceTrack(null)` to stop,
+which keeps the sender for next time.
+
+A voice call therefore costs one renegotiation the first time somebody shares,
+and none after that.
+
+### Stopping does not end the remote track
+
+The consequence worth knowing, because it produces a convincing bug:
+`replaceTrack(sender, null)` leaves the receiving track **alive and muted**.
+`ended` only fires when the connection goes away. A receiver watching for `ended`
+to learn that a share stopped waits forever and leaves a frozen last frame on
+screen for the rest of the call.
+
+The events that matter are `mute` and `unmute`, and `useHasVideoTrack` in the
+overlay watches those — plus `addtrack` on the stream, because the browser
+mutates the remote `MediaStream` in place when a track arrives, so React never
+re-renders on its own.
+
+### The camera and microphone are not touched
+
+Starting a share does not re-acquire audio, does not read the mute flag, and does
+not stop the camera. Somebody muted stays muted through a share; a camera that
+was on stays on and gets the sender back when the share ends. Those are three
+assertions in `screen-share.test.mjs` rather than three things to remember.
+
+The camera is _not sent_ while a screen is, because they share a sender — but it
+keeps running, so handing it back is instant.
+
+### The browser's own Stop button
+
+A native "Stop sharing" bar ends the track and tells the page nothing else. A
+page that listens only to its own button goes on claiming to share a screen that
+stopped — the most common screen-sharing bug, and a privacy failure rather than a
+cosmetic one. `LocalMedia` listens for `ended` on the display track and treats it
+exactly like the in-app Stop.
+
+### Cancelling is not denying
+
+`getDisplayMedia` throws `NotAllowedError` both when a policy blocks capture and
+when somebody opens the picker and changes their mind. The two are genuinely
+indistinguishable — same error name, and the messages differ by browser and
+version.
+
+KITH treats both as **cancelled** and shows nothing. That means somebody blocked
+by enterprise policy gets no explanation, which is the cheaper mistake: they
+press the button again, nothing happens, and they go and look at their settings.
+The alternative accuses every person who changes their mind of denying
+permission.
+
+Other failures — no screen available, capture failed, window not focused — are
+classified separately and do raise a message.
+
+### Where it will not work at all
+
+`getDisplayMedia` does not exist on iOS (no browser there has it, because WebKit
+does not), in most embedded webviews, or on an insecure origin. The control is
+**hidden** rather than disabled in those cases: a button that can never work is
+not a button. Detection goes through `useSyncExternalStore` so it survives
+hydration, since the overlay is server-rendered for anybody who refreshes
+mid-call.
+
+### No tab audio
+
+`getDisplayMedia` is asked for video only. Chromium offers a "share tab audio"
+checkbox when you request audio, and publishing that would need a second audio
+sender alongside the microphone — mixing them into one track would mean the far
+end could not mute you without also muting the video. A checkbox that silently
+does nothing is worse than no checkbox, so it is not offered until that sender
+exists.
+
+### Saying so
+
+Sharing a screen is the one state in KITH where forgetting you are in it has real
+consequences, so it is signposted three ways at once: the control turns ember and
+sets `aria-pressed`, a pulsing ember strip in the call panel reads "You're
+sharing your screen" with a Stop button beside it, and your own screen is
+previewed underneath — which is how people notice they picked the wrong window.
+
+The panel widens rather than being replaced, so a share reads as the same call
+changing rather than a new surface arriving.
+
+---
+
+## 9. The interface
 
 **The call button** sits in the conversation header and on every row of the call
 log. It is disabled whenever any call is live, because there is only ever one —
@@ -215,12 +314,20 @@ depends on the audible one.
 
 ---
 
-## 9. Testing
+## 10. Testing
 
 ```
 npm run calls:test         94 assertions — the lifecycle and its boundaries
-npm run call-session:test  48 assertions — two sessions, one call, end to end
+npm run call-session:test  55 assertions — two sessions, one call, end to end
+npm run screen-share:test  82 assertions — capture, stopping, and the sender rule
 ```
+
+`screen-share.test.mjs` installs a fake `navigator.mediaDevices` — tracks that
+record whether they were stopped, a picker that can be told to be cancelled — and
+drives the real `LocalMedia` and `VideoPublisher` against it. That is what makes
+the invisible half assertable: that a share never re-acquires the microphone,
+that a mute survives one, that the browser's own stop bar is noticed, and that
+exactly one media line is ever created however many times the source changes.
 
 `calls.test.mjs` is mostly negative, because the interesting questions are:
 can a stranger ring a conversation they are not in, can a participant mark their
@@ -246,9 +353,15 @@ ring is audible. Those need hands:
    or two; both people can hear each other; mute shows on the _other_ side;
    hang up ends it for both; the call appears in both logs with the same
    duration.
-5. Then the unhappy paths — decline, let it ring out for 45 seconds, close the
-   caller's tab mid-call, and turn one machine's wifi off and on again.
-6. `chrome://webrtc-internals` shows the candidate pairs and the selected route
+5. Then screen sharing: share a window, check the other person sees it and that
+   your own preview matches what you picked; stop from the in-app button, then
+   share again and stop from the **browser's own** bar — the panel must notice
+   both. Mute yourself first and confirm you are still muted afterwards.
+6. Then the unhappy paths — decline, let it ring out for 45 seconds, close the
+   caller's tab mid-call, dismiss the screen picker without choosing anything
+   (nothing should happen, and no error should appear), and turn one machine's
+   wifi off and on again.
+7. `chrome://webrtc-internals` shows the candidate pairs and the selected route
    if a connection does not come up.
 
 **Both browsers must reach each other's network.** On the same wifi that is
@@ -258,11 +371,13 @@ behind symmetric or carrier-grade NAT, because there is no TURN relay yet —
 
 ---
 
-## 10. Not built
+## 11. Not built
 
-- **Video.** The `calls.kind` column and the `MediaState.cameraEnabled` flag both
-  exist and the capture code is written (`lib/webrtc/media.ts`); nothing offers
-  it.
+- **Camera video.** The `calls.kind` column and the `MediaState.cameraEnabled`
+  flag both exist, the capture code is written (`lib/webrtc/media.ts`), and
+  `VideoPublisher` already switches between a camera and a screen on one sender —
+  every one of those paths is tested. Nothing offers the control yet.
+- **Tab and system audio** alongside a share. See §8.
 - **Group calls.** The schema is group-shaped throughout — `start_call` rings
   every member and `end_call` keeps a call alive while two people remain — but
   the provider holds one peer connection, so it is 1:1 in practice. A mesh is one

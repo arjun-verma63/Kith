@@ -341,5 +341,4 @@ Deliberately out of scope for this phase:
   participant in a mesh, one shared local stream. At six people a mesh is the
   right answer — an SFU is a server we would have to run, and at this size it
   would cost more than it saved.
-- **Screen share.** `acquireDisplayStream()` exists in `media.ts` and the
-  `screenSharing` flag is already on the wire; nothing calls it yet.
+- ~~Screen share~~ — built. See [CALLS.md §8](CALLS.md).

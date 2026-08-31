@@ -60,9 +60,45 @@ export const VIDEO_CONSTRAINTS: MediaTrackConstraints = {
   facingMode: "user",
 };
 
-/** A getUserMedia failure the UI can actually say something about. */
+/**
+ * What we ask for when sharing a screen.
+ *
+ * The opposite trade to the camera. A shared screen is mostly text that has to
+ * stay legible, and mostly still — so resolution is worth more than frame rate,
+ * and 15fps of sharp text beats 30fps of mush at the same bitrate. `contentHint`
+ * (applied to the track after capture) tells the encoder the same thing in the
+ * language it understands.
+ *
+ * No `audio`. Chromium offers a "share tab audio" checkbox when you ask for it,
+ * and publishing that would need a second audio sender alongside the microphone
+ * — mixing them into one track would mean the far end could not mute you without
+ * also muting the video. Offering a checkbox that silently does nothing is worse
+ * than not offering it, so the request is video-only until that sender exists.
+ */
+export const DISPLAY_CONSTRAINTS: MediaTrackConstraints = {
+  frameRate: { ideal: 15, max: 30 },
+  width: { ideal: 1920, max: 1920 },
+  height: { ideal: 1080, max: 1080 },
+};
+
+/**
+ * Whether this browser can share a screen at all.
+ *
+ * `getDisplayMedia` is missing on insecure origins, in most embedded webviews,
+ * and — the case that actually matters — on iOS, where no browser supports it
+ * because WebKit does not. The button is hidden rather than disabled there:
+ * a control that can never work is not a control.
+ */
+export function isDisplayMediaSupported(): boolean {
+  return (
+    typeof navigator !== "undefined" &&
+    typeof navigator.mediaDevices?.getDisplayMedia === "function"
+  );
+}
+
+/** A capture failure the UI can actually say something about. */
 export class MediaError extends Error {
-  readonly kind: "denied" | "missing" | "in_use" | "unsupported" | "unknown";
+  readonly kind: "denied" | "cancelled" | "missing" | "in_use" | "unsupported" | "unknown";
 
   constructor(kind: MediaError["kind"], message: string, options?: { cause?: unknown }) {
     super(message, options);
@@ -163,17 +199,64 @@ function withDevice(base: MediaTrackConstraints, deviceId?: string): MediaTrackC
   return deviceId ? { ...base, deviceId: { ideal: deviceId } } : base;
 }
 
-/** Screen share. Separate call, separate permission, separate prompt. */
+/**
+ * Classifies a `getDisplayMedia` failure.
+ *
+ * Separate from `classify` because the same error name means something
+ * completely different here. `NotAllowedError` from `getUserMedia` means the
+ * browser blocked the microphone and the user needs to go and fix a permission.
+ * From `getDisplayMedia` it overwhelmingly means the user opened the picker and
+ * changed their mind — which is not a failure, and must not raise a banner
+ * saying permission was denied.
+ *
+ * The two cases genuinely cannot be told apart: a policy block and a dismissed
+ * picker throw the same error with the same name, and the messages differ by
+ * browser and version. Treating both as "cancelled" means somebody blocked by
+ * enterprise policy gets no explanation, which is the cheaper mistake — they
+ * press the button again, nothing happens, and they look at their settings.
+ * The alternative accuses every person who changes their mind.
+ */
+function classifyDisplay(error: unknown): MediaError {
+  const name = error instanceof Error ? error.name : "";
+
+  switch (name) {
+    case "NotAllowedError":
+      return new MediaError("cancelled", "Screen sharing was not started.", { cause: error });
+    case "NotFoundError":
+      return new MediaError("missing", "There was no screen available to share.", { cause: error });
+    case "NotReadableError":
+    case "AbortError":
+      return new MediaError("in_use", "That screen could not be captured.", { cause: error });
+    case "InvalidStateError":
+      return new MediaError("unsupported", "Bring this window to the front and try again.", {
+        cause: error,
+      });
+    default:
+      return new MediaError("unknown", "Screen sharing could not be started.", { cause: error });
+  }
+}
+
+/**
+ * Opens the screen picker.
+ *
+ * MUST be called synchronously from a user gesture. Browsers require transient
+ * activation for this, and awaiting anything first — a server round trip, a
+ * confirmation — spends it and the call rejects. That is why nothing in the
+ * screen-share path talks to the server before this resolves.
+ */
 export async function acquireDisplayStream(): Promise<MediaStream> {
+  if (!isDisplayMediaSupported()) {
+    throw new MediaError("unsupported", "This browser cannot share a screen.");
+  }
+
   try {
     return await mediaDevices().getDisplayMedia({
-      video: { frameRate: { ideal: 15, max: 30 } },
-      // Tab audio when the browser offers it. Chromium does, Firefox mostly
-      // does not, and neither case is an error.
-      audio: true,
+      video: DISPLAY_CONSTRAINTS,
+      audio: false,
     });
   } catch (error) {
-    throw classify(error);
+    if (error instanceof MediaError) throw error;
+    throw classifyDisplay(error);
   }
 }
 
@@ -215,12 +298,27 @@ export function stopStream(stream: MediaStream | null): void {
  */
 export class LocalMedia {
   private stream: MediaStream | null = null;
+  /**
+   * The screen, kept apart from the microphone stream on purpose.
+   *
+   * They have different lifetimes: a share starts and stops several times during
+   * one call, while the microphone is acquired once and released at the end. Held
+   * in one stream, stopping a share would mean picking tracks out of a shared
+   * object, and `stop()` at the end of a call would be the only thing keeping
+   * them in step. Two streams, two lifetimes, no bookkeeping.
+   */
+  private displayStream: MediaStream | null = null;
   private state: MediaState = { ...DEFAULT_MEDIA_STATE };
   private preferences: DevicePreferences = {};
 
   /**
    * Called when the video track is replaced, so the peer connection can
    * `replaceTrack` on the existing sender instead of renegotiating.
+   *
+   * One sender carries whatever video this person is sending — camera or screen.
+   * That is what makes switching between them free: the source changes, the
+   * media line does not, and the far end sees new frames rather than a
+   * renegotiation and a black gap.
    */
   onVideoTrack: ((track: MediaStreamTrack | null) => void | Promise<void>) | null = null;
   onStateChange: ((state: MediaState) => void) | null = null;
@@ -269,7 +367,10 @@ export class LocalMedia {
       }
       this.state = { ...this.state, cameraEnabled: false };
       this.emit();
-      await this.onVideoTrack?.(null);
+      // While a screen share owns the sender, the camera is not what is being
+      // sent — so turning it off releases the hardware and nothing else. Handing
+      // null to the sender here would kill the share instead.
+      if (!this.state.screenSharing) await this.onVideoTrack?.(null);
       return;
     }
 
@@ -284,10 +385,101 @@ export class LocalMedia {
     this.stream.addTrack(track);
     this.state = { ...this.state, cameraEnabled: true };
     this.emit();
-    await this.onVideoTrack?.(track);
+    // Same rule in the other direction: the camera comes back on, but the screen
+    // keeps the sender until the share ends. `stopScreenShare` hands it over.
+    if (!this.state.screenSharing) await this.onVideoTrack?.(track);
   }
 
-  /** Mid-call device switch, without renegotiating. */
+  /* ------------------------------------------------------------ screen share */
+
+  /**
+   * Starts sharing a screen, window or tab.
+   *
+   * Call this straight out of a click handler — see `acquireDisplayStream`.
+   *
+   * The microphone is not touched: no re-acquisition, no mute reset, not even a
+   * read. Somebody who is muted stays muted through a share, which is the
+   * behaviour people assume and the one that matters if they are wrong about it.
+   */
+  async startScreenShare(): Promise<MediaStreamTrack> {
+    const display = await acquireDisplayStream();
+
+    const track = display.getVideoTracks()[0];
+    if (!track) {
+      stopStream(display);
+      throw new MediaError("missing", "That screen produced no video.");
+    }
+
+    // Anything else the picker handed back — a stray audio track from a browser
+    // that ignores `audio: false` — is released rather than left running.
+    for (const extra of display.getTracks()) {
+      if (extra !== track) {
+        extra.stop();
+        display.removeTrack(extra);
+      }
+    }
+
+    // Replacing one share with another: release the old screen first, but keep
+    // `screenSharing` true throughout so the UI never blinks off and on.
+    this.releaseDisplay();
+    this.displayStream = display;
+
+    // Sharpness over smoothness. A shared screen is mostly still text.
+    track.contentHint = "detail";
+
+    // The browser's own "Stop sharing" bar ends the track without telling the
+    // page anything else. Without this listener the UI would go on claiming to
+    // share a screen that stopped — the single most common screen-sharing bug,
+    // and a privacy one rather than a cosmetic one.
+    track.addEventListener("ended", this.handleDisplayEnded);
+
+    this.state = { ...this.state, screenSharing: true };
+    this.emit();
+    await this.onVideoTrack?.(track);
+    return track;
+  }
+
+  /**
+   * Stops sharing, and gives the sender back to the camera if it is on.
+   *
+   * Idempotent — the user's Stop button and the browser's own both land here.
+   */
+  async stopScreenShare(): Promise<void> {
+    if (!this.displayStream) return;
+
+    this.releaseDisplay();
+    this.state = { ...this.state, screenSharing: false };
+    this.emit();
+
+    // Whatever the camera was doing before the share, it is still doing. This is
+    // where it goes back on the wire.
+    const camera = this.state.cameraEnabled ? (this.stream?.getVideoTracks()[0] ?? null) : null;
+    await this.onVideoTrack?.(camera);
+  }
+
+  isScreenSharing(): boolean {
+    return this.displayStream !== null;
+  }
+
+  /** The screen as it is being sent, for the local preview. */
+  getDisplayStream(): MediaStream | null {
+    return this.displayStream;
+  }
+
+  private readonly handleDisplayEnded = () => {
+    void this.stopScreenShare();
+  };
+
+  private releaseDisplay(): void {
+    if (!this.displayStream) return;
+    for (const track of this.displayStream.getTracks()) {
+      track.removeEventListener("ended", this.handleDisplayEnded);
+      track.stop();
+    }
+    this.displayStream = null;
+  }
+
+  /** Mid-device switch, without renegotiating. */
   async switchDevice(kind: MediaKind, deviceId: string): Promise<void> {
     if (!this.stream) return;
 
@@ -322,13 +514,16 @@ export class LocalMedia {
     }
     this.stream.addTrack(track);
     this.emit();
-    await this.onVideoTrack?.(track);
+    if (!this.state.screenSharing) await this.onVideoTrack?.(track);
   }
 
   stop(): void {
+    // Both streams. A share left running after the call ends is a browser still
+    // recording somebody's screen.
+    this.releaseDisplay();
     stopStream(this.stream);
     this.stream = null;
-    this.state = { ...DEFAULT_MEDIA_STATE, micEnabled: false };
+    this.state = { ...DEFAULT_MEDIA_STATE, micEnabled: false, screenSharing: false };
     this.emit();
   }
 

@@ -26,6 +26,7 @@ import { useLocalMedia } from "@/features/calls/use-local-media";
 import { usePeerConnection } from "@/features/calls/use-peer-connection";
 import { subscribeToUserEvents } from "@/lib/supabase/user-channel";
 import type { PeerState } from "@/lib/webrtc/peer";
+import type { MediaState } from "@/lib/webrtc/signaling";
 
 /**
  * The one place a call exists.
@@ -56,8 +57,13 @@ export interface CallContextValue {
   phase: "idle" | "outgoing" | "incoming" | "active";
   connection: PeerState;
   micEnabled: boolean;
+  screenSharing: boolean;
+  screenShareSupported: boolean;
+  /** Your own screen, so you can see exactly what you are showing. */
+  localScreenStream: MediaStream | null;
   /** What the other side says it is sending. Never inferred from the audio. */
   remoteMicEnabled: boolean;
+  remoteScreenSharing: boolean;
   remoteStream: MediaStream | null;
   error: string | null;
   busy: boolean;
@@ -66,6 +72,8 @@ export interface CallContextValue {
   decline: () => Promise<void>;
   hangUp: () => Promise<void>;
   toggleMic: () => void;
+  /** Call straight from a click handler — the picker needs the activation. */
+  toggleScreenShare: () => Promise<void>;
   dismissError: () => void;
 }
 
@@ -117,7 +125,15 @@ export function CallProvider({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const media = useLocalMedia();
+  // The video sender, handed to the media controller so a screen share reaches
+  // the far end. `setVideoTrack` replaces the track on the existing sender when
+  // there is one and adds a sender only the first time — which on a voice call
+  // is the first share, and is the one renegotiation the feature costs.
+  const setVideoTrack = useRef<(track: MediaStreamTrack | null) => Promise<void>>(async () => {});
+
+  const media = useLocalMedia({
+    onVideoTrack: (track) => setVideoTrack.current(track),
+  });
 
   const phase: CallContextValue["phase"] = !call
     ? "idle"
@@ -142,6 +158,10 @@ export function CallProvider({
       setCall(null);
     },
   });
+
+  useEffect(() => {
+    setVideoTrack.current = peer.setVideoTrack;
+  }, [peer.setVideoTrack]);
 
   // Kept in a ref so the socket handlers and the timeout do not have to be
   // rebuilt every time the call object changes identity.
@@ -378,18 +398,45 @@ export function CallProvider({
   const decline = useCallback(() => end("declined"), [end]);
   const hangUp = useCallback(() => end("hung_up"), [end]);
 
+  /**
+   * Publishes what this side is sending.
+   *
+   * Always the whole `MediaState`, never a patch. The far end renders icons from
+   * it, and a partial update is how a mute indicator ends up describing a state
+   * nobody is in.
+   */
+  const publishMediaState = useCallback(
+    (next: MediaState) => {
+      const current = callRef.current;
+      peer.sendMediaState(next);
+      if (current) void setCallMediaStateAction(current.id, next);
+    },
+    [peer],
+  );
+
   const toggleMic = useCallback(() => {
     const next = !media.media.micEnabled;
     media.toggleMic();
 
-    const current = callRef.current;
-    if (!current) return;
-
     // Told, not inferred: a muted track still arrives, just silent, so the other
     // side cannot tell "muted" from "quiet room" by listening.
-    peer.sendMediaState({ micEnabled: next, cameraEnabled: false, screenSharing: false });
-    void setCallMediaStateAction(current.id, { micEnabled: next });
-  }, [media, peer]);
+    publishMediaState({ ...media.media, micEnabled: next });
+  }, [media, publishMediaState]);
+
+  /**
+   * Share, or stop sharing.
+   *
+   * Nothing is awaited before `media.toggleScreenShare()` — `getDisplayMedia`
+   * needs the click's transient activation and a server round trip would spend
+   * it. The far end is told only after the picker has resolved, so a share that
+   * was never started is never announced.
+   */
+  const toggleScreenShare = useCallback(async () => {
+    await media.toggleScreenShare();
+    // Read from the controller, not from React state: the toggle has already
+    // resolved and `media.media` is still a render behind it.
+    publishMediaState(media.getState());
+  }, [media, publishMediaState]);
 
   const value = useMemo<CallContextValue>(
     () => ({
@@ -397,7 +444,11 @@ export function CallProvider({
       phase,
       connection: peer.state,
       micEnabled: media.media.micEnabled,
+      screenSharing: media.media.screenSharing,
+      screenShareSupported: media.screenShareSupported,
+      localScreenStream: media.displayStream,
       remoteMicEnabled: peer.remoteMedia.micEnabled,
+      remoteScreenSharing: peer.remoteMedia.screenSharing,
       remoteStream: peer.remoteStream,
       error,
       busy,
@@ -406,6 +457,7 @@ export function CallProvider({
       decline,
       hangUp,
       toggleMic,
+      toggleScreenShare,
       dismissError: () => setError(null),
     }),
     [
@@ -413,8 +465,12 @@ export function CallProvider({
       phase,
       peer.state,
       peer.remoteMedia.micEnabled,
+      peer.remoteMedia.screenSharing,
       peer.remoteStream,
       media.media.micEnabled,
+      media.media.screenSharing,
+      media.displayStream,
+      media.screenShareSupported,
       error,
       busy,
       startCall,
@@ -422,6 +478,7 @@ export function CallProvider({
       decline,
       hangUp,
       toggleMic,
+      toggleScreenShare,
     ],
   );
 

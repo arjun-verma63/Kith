@@ -119,10 +119,17 @@ export async function endCallAction(
   return { ok: true, call: null };
 }
 
-/** Publishes mute state, for anybody who joins after it changed. */
+/**
+ * Publishes what this participant is sending, for anybody who joins late.
+ *
+ * The authoritative copy travels on the call's broadcast channel; this is the
+ * fallback for a browser that arrives after the last broadcast. Stored whole
+ * rather than as a patch — a half-written state is how an icon ends up
+ * describing a state nobody is in.
+ */
 export async function setCallMediaStateAction(
   callId: string,
-  state: { micEnabled: boolean },
+  state: { micEnabled: boolean; cameraEnabled?: boolean; screenSharing?: boolean },
 ): Promise<void> {
   const user = await getCurrentUser();
   if (!user) return;
