@@ -13,9 +13,8 @@ import {
   resetPasswordSchema,
   signInSchema,
   signUpSchema,
-  toFieldErrors,
-  type AuthFormState,
 } from "@/features/auth/schema";
+import { toFieldErrors, type FormState } from "@/lib/forms";
 import { safeRedirect } from "@/features/auth/redirects";
 
 /**
@@ -39,7 +38,7 @@ import { safeRedirect } from "@/features/auth/redirects";
 
 const EMAIL_REDIRECT = `${clientEnv.NEXT_PUBLIC_SITE_URL}/auth/confirm`;
 
-function fieldError(fieldErrors: Record<string, string[]>): AuthFormState {
+function fieldError(fieldErrors: Record<string, string[]>): FormState {
   return {
     status: "error",
     message: "Check the highlighted fields.",
@@ -51,10 +50,7 @@ function fieldError(fieldErrors: Record<string, string[]>): AuthFormState {
 /*  Sign up                                                                   */
 /* ========================================================================== */
 
-export async function signUpAction(
-  _prev: AuthFormState,
-  formData: FormData,
-): Promise<AuthFormState> {
+export async function signUpAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const parsed = signUpSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -116,7 +112,7 @@ export async function signUpAction(
 
   if (error) {
     if (claimedInviteId) await admin.rpc("release_invite", { p_invite_id: claimedInviteId });
-    return { ...fromAuthError(error, "signUp").error, status: "error" } as AuthFormState;
+    return { ...fromAuthError(error, "signUp").error, status: "error" } as FormState;
   }
 
   if (data.user && claimedInviteId) {
@@ -133,10 +129,7 @@ export async function signUpAction(
 /*  Sign in                                                                   */
 /* ========================================================================== */
 
-export async function signInAction(
-  _prev: AuthFormState,
-  formData: FormData,
-): Promise<AuthFormState> {
+export async function signInAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const parsed = signInSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -160,7 +153,7 @@ export async function signInAction(
         message: "That email and password do not match. Check them and try again.",
       };
     }
-    return { ...fromAuthError(error, "signIn").error, status: "error" } as AuthFormState;
+    return { ...fromAuthError(error, "signIn").error, status: "error" } as FormState;
   }
 
   if (!data.user?.email_confirmed_at) {
@@ -187,9 +180,9 @@ export async function signOutAction(): Promise<void> {
 /* ========================================================================== */
 
 export async function forgotPasswordAction(
-  _prev: AuthFormState,
+  _prev: FormState,
   formData: FormData,
-): Promise<AuthFormState> {
+): Promise<FormState> {
   const parsed = forgotPasswordSchema.safeParse({ email: formData.get("email") });
 
   if (!parsed.success) return fieldError(toFieldErrors(parsed.error));
@@ -224,9 +217,9 @@ export async function forgotPasswordAction(
 /* ========================================================================== */
 
 export async function resetPasswordAction(
-  _prev: AuthFormState,
+  _prev: FormState,
   formData: FormData,
-): Promise<AuthFormState> {
+): Promise<FormState> {
   const parsed = resetPasswordSchema.safeParse({
     password: formData.get("password"),
     confirmPassword: formData.get("confirmPassword"),
@@ -258,7 +251,7 @@ export async function resetPasswordAction(
         password: ["That password was rejected. Try a longer or less common one."],
       });
     }
-    return { ...fromAuthError(error, "updatePassword").error, status: "error" } as AuthFormState;
+    return { ...fromAuthError(error, "updatePassword").error, status: "error" } as FormState;
   }
 
   redirect("/login?reset=1");
@@ -269,9 +262,9 @@ export async function resetPasswordAction(
 /* ========================================================================== */
 
 export async function resendVerificationAction(
-  _prev: AuthFormState,
+  _prev: FormState,
   _formData: FormData,
-): Promise<AuthFormState> {
+): Promise<FormState> {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -294,7 +287,7 @@ export async function resendVerificationAction(
         message: "Too many requests. Wait a minute before asking for another.",
       };
     }
-    return { ...fromAuthError(error, "resend").error, status: "error" } as AuthFormState;
+    return { ...fromAuthError(error, "resend").error, status: "error" } as FormState;
   }
 
   return { status: "success", message: "Sent. Check your inbox — and your spam folder." };

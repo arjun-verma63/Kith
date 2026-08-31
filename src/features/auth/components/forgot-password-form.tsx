@@ -5,15 +5,10 @@ import { useActionState } from "react";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { forgotPasswordAction } from "@/features/auth/actions";
-import {
-  AuthAside,
-  AuthLink,
-  FormBanner,
-  FormFields,
-  SubmitButton,
-} from "@/features/auth/components/auth-form";
-import { fieldError } from "@/features/auth/components/field-error";
-import { idleFormState } from "@/features/auth/schema";
+import { AuthAside, AuthLink } from "@/features/auth/components/auth-form";
+import { FormBanner, FormFields, SubmitButton } from "@/components/ui/form";
+import { fieldError } from "@/lib/forms";
+import { idleFormState } from "@/lib/forms";
 
 export function ForgotPasswordForm() {
   const [state, formAction] = useActionState(forgotPasswordAction, idleFormState);

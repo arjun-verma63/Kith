@@ -4,16 +4,10 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { PresenceEmber } from "@/components/ui/presence-ember";
-import {
-  derivePresence,
-  describeLastSeen,
-  formatBirthday,
-  formatJoined,
-} from "@/features/profile/presence";
+import { LivePresenceLabel } from "@/components/presence/live-presence";
+import { formatBirthday, formatJoined } from "@/features/profile/presence";
+import { derivePresence, type DeclaredStatus } from "@/lib/presence";
 import type { ProfileView as Profile } from "@/features/profile/queries";
-import type { ProfileStatus } from "@/features/profile/schema";
-import { cn } from "@/lib/utils/cn";
 
 /**
  * Somebody's profile.
@@ -28,9 +22,16 @@ import { cn } from "@/lib/utils/cn";
  * defaults to.
  */
 export function ProfileView({ profile }: { profile: Profile }) {
-  const status = profile.status as ProfileStatus;
+  const status = profile.status as DeclaredStatus;
+  // The avatar ring uses the server-rendered fallback so the page has a sensible
+  // first paint; the label below it is a client component that follows the live
+  // channel and corrects both once the socket is up.
   const presence = derivePresence({ status, lastSeenAt: profile.last_seen_at });
-  const lastSeen = describeLastSeen({ status, lastSeenAt: profile.last_seen_at });
+  const subject = {
+    userId: profile.id,
+    status,
+    lastSeenAt: profile.last_seen_at,
+  };
   const birthday = formatBirthday(profile.birthday);
 
   return (
@@ -56,15 +57,7 @@ export function ProfileView({ profile }: { profile: Profile }) {
           <p className="numeric text-sm text-fg-dim">@{profile.username}</p>
 
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <span
-              className={cn(
-                "inline-flex items-center gap-2 text-xs",
-                presence === "lit" ? "text-moss" : "text-fg-dim",
-              )}
-            >
-              <PresenceEmber state={presence} size="sm" name={profile.display_name} />
-              {lastSeen}
-            </span>
+            <LivePresenceLabel subject={subject} name={profile.display_name} />
 
             {profile.status_text ? <Badge tone="neutral">{profile.status_text}</Badge> : null}
           </div>

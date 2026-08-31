@@ -13,6 +13,9 @@ const noDeepRelative = {
   message: "Use the '@/' alias instead of reaching up more than one directory.",
 };
 
+/** Every vertical slice under src/features. Adding one means adding it here. */
+const FEATURE_SLICES = ["auth", "friends", "landing", "profile"];
+
 const noFeatureImports = {
   group: ["@/features", "@/features/*"],
   message:
@@ -65,6 +68,44 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+
+  /*
+   * A feature never imports another feature.
+   *
+   * The README has claimed this since Phase 1 and it was quietly false: friends
+   * reached into profile for presence, and three slices reached into auth for
+   * form state. Both moved to `lib/`. Stating a boundary without enforcing it
+   * just means finding out later that it never held.
+   *
+   * One config block per slice, because the rule has to allow a slice to import
+   * ITSELF — and `no-restricted-imports` matches the specifier, not the importer,
+   * so it cannot express "any feature but my own" in a single pattern. Adding a
+   * slice means adding it here, which is the intended friction.
+   */
+  ...FEATURE_SLICES.map((slice) => ({
+    files: [`src/features/${slice}/**/*.{ts,tsx}`],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            noDeepRelative,
+            {
+              // Every OTHER slice, listed explicitly. Negation patterns
+              // (`!@/features/self/**`) do not reliably un-match here, and a
+              // boundary that silently fails open is worse than none.
+              group: FEATURE_SLICES.filter((other) => other !== slice).flatMap((other) => [
+                `@/features/${other}`,
+                `@/features/${other}/**`,
+              ]),
+              message:
+                "A feature may not import another feature. Move the shared piece into lib/ or components/.",
+            },
+          ],
+        },
+      ],
+    },
+  })),
 
   {
     // Design-system primitives stay generic and reusable.

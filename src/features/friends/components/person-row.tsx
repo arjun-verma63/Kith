@@ -6,10 +6,10 @@ import { useFormStatus } from "react-dom";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Button, type ButtonProps } from "@/components/ui/button";
-import { derivePresence, describeLastSeen } from "@/features/profile/presence";
-import type { ProfileStatus } from "@/features/profile/schema";
 import type { PersonCard } from "@/features/friends/queries";
-import { idleFormState, type AuthFormState } from "@/features/auth/schema";
+import { usePresence, usePresenceLabel } from "@/components/presence/use-presence";
+import { idleFormState, type FormState } from "@/lib/forms";
+import type { DeclaredStatus } from "@/lib/presence";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -20,8 +20,9 @@ import { cn } from "@/lib/utils/cn";
  * avoid — and rows scan faster, hold a name and a status and two actions without
  * wrapping, and reflow to a phone without becoming one column of tall boxes.
  *
- * Presence is derived here from the same pure function the profile page uses, so
- * the light beside a name means exactly what it means everywhere else.
+ * The light follows the live presence channel, falling back to `last_seen_at`
+ * whenever there is no connection — so a dropped socket shows people as last
+ * seen rather than as permanently online.
  */
 export function PersonRow({
   person,
@@ -32,13 +33,13 @@ export function PersonRow({
   meta?: ReactNode;
   actions?: ReactNode;
 }) {
-  const status = person.status as ProfileStatus;
-  const presence = person.lastSeenAt
-    ? derivePresence({ status, lastSeenAt: person.lastSeenAt })
-    : "dark";
-  const lastSeen = person.lastSeenAt
-    ? describeLastSeen({ status, lastSeenAt: person.lastSeenAt })
-    : "Offline";
+  const subject = {
+    userId: person.id,
+    status: person.status as DeclaredStatus,
+    lastSeenAt: person.lastSeenAt,
+  };
+  const presence = usePresence(subject);
+  const lastSeen = usePresenceLabel(subject);
 
   return (
     <li className="row-lit flex items-center gap-4 border-b border-line py-4 pl-4 last:border-b-0">
@@ -96,7 +97,7 @@ export function ActionForm({
   children,
   ...button
 }: {
-  action: (prev: AuthFormState, formData: FormData) => Promise<AuthFormState>;
+  action: (prev: FormState, formData: FormData) => Promise<FormState>;
   fields: Record<string, string>;
   children: ReactNode;
 } & Omit<ButtonProps, "type" | "children">) {

@@ -94,8 +94,10 @@ app/  →  features/  →  lib/ + components/ui/
 ```
 
 A feature never imports another feature. `lib/` never imports UI. `components/ui/` never
-imports a feature. ESLint enforces the outer edges of this in `eslint.config.mjs` — these
-rules are cheap now and very expensive to retrofit once the dependency graph has set.
+imports a feature. **All of this is enforced in `eslint.config.mjs`**, including the
+cross-feature rule — which was quietly false until presence needed to be shared and the
+violations came to light. Anything two features need lives in `lib/` (`presence.ts`,
+`forms.ts`, `validation.ts`) or `components/`.
 
 Two boundaries are already wired for phases that do not exist yet:
 
@@ -309,6 +311,32 @@ query returns nothing (an empty search that lists everyone is a member
 directory), `discoverable = false` hides you from strangers but not from
 existing friends, and a blocked person is absent from the result set entirely
 rather than shown as "no results".
+
+### Presence
+
+Realtime Presence on one channel, `presence:lobby`, for the whole room — no
+database writes and no polling. Shown on the friend list, on profiles, and as a
+count in the header ("3 in the room").
+
+**The load-bearing rule is what happens when we do NOT know.** The live map is
+`null` whenever there is no subscription — server rendering, a dropped socket,
+Supabase unreachable — and `null` makes every consumer fall back to
+`last_seen_at`. An empty map means "nobody is online"; `null` means "ask the
+database". Conflating those two is exactly how an app ends up showing five lit
+embers forever after its socket died.
+
+Resolution order, in [use-presence.ts](src/components/presence/use-presence.ts):
+
+1. A **declared** status wins outright. `invisible` reads as offline even to a
+   client that can see the person on the channel — and an invisible user never
+   joins it in the first place, so the meta never leaves their browser.
+2. With a live map, it is **authoritative including absence**. Not in the set
+   means offline, full stop.
+3. With no live map, fall back to `last_seen_at`.
+
+Idle is a hidden tab (immediately) or five minutes without a pointer or key.
+The `last_seen_at` heartbeat still runs alongside: the channel answers "who is
+here now", the heartbeat answers "when were they last here" after they leave.
 
 ## What is deliberately absent
 

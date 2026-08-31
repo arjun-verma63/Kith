@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 
-import { PresenceEmber, type PresenceState } from "@/components/ui/presence-ember";
+import { PresenceEmber } from "@/components/ui/presence-ember";
+import type { PresenceState } from "@/lib/presence";
 import { cn } from "@/lib/utils/cn";
 
 /**

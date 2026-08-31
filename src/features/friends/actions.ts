@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { fromPostgrestError } from "@/lib/supabase/errors";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
-import type { AuthFormState } from "@/features/auth/schema";
+import type { FormState } from "@/lib/forms";
 
 /**
  * Friend mutations.
@@ -28,7 +28,7 @@ import type { AuthFormState } from "@/features/auth/schema";
  * checks here buy is a message a person can act on instead of a 500.
  */
 
-type State = AuthFormState;
+type State = FormState;
 
 const uuid = z.uuid("That is not a valid id.");
 

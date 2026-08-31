@@ -8,7 +8,7 @@ import {
   profileSchema,
   toDateString,
 } from "@/features/profile/schema";
-import { toFieldErrors, type AuthFormState } from "@/features/auth/schema";
+import { toFieldErrors, type FormState } from "@/lib/forms";
 import { fromPostgrestError } from "@/lib/supabase/errors";
 import { BUCKETS } from "@/lib/supabase/storage";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
@@ -27,7 +27,7 @@ import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/serve
  * is the guarantee.
  */
 
-type State = AuthFormState;
+type State = FormState;
 
 function invalid(fieldErrors: Record<string, string[]>): State {
   return { status: "error", message: "Check the highlighted fields.", fieldErrors };

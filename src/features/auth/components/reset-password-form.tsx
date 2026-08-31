@@ -3,16 +3,11 @@
 import { useActionState } from "react";
 
 import { resetPasswordAction } from "@/features/auth/actions";
-import {
-  AuthAside,
-  AuthLink,
-  FormBanner,
-  FormFields,
-  SubmitButton,
-} from "@/features/auth/components/auth-form";
-import { fieldError } from "@/features/auth/components/field-error";
+import { AuthAside, AuthLink } from "@/features/auth/components/auth-form";
+import { FormBanner, FormFields, SubmitButton } from "@/components/ui/form";
+import { fieldError } from "@/lib/forms";
 import { PasswordField } from "@/features/auth/components/password-field";
-import { idleFormState } from "@/features/auth/schema";
+import { idleFormState } from "@/lib/forms";
 
 export function ResetPasswordForm() {
   const [state, formAction] = useActionState(resetPasswordAction, idleFormState);

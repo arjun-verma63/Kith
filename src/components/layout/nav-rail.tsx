@@ -4,7 +4,7 @@ import { DESTINATIONS } from "@/components/layout/destinations";
 import { NavItem } from "@/components/layout/nav-item";
 import { Avatar } from "@/components/ui/avatar";
 import { KithMark } from "@/components/ui/icon";
-import type { PresenceState } from "@/components/ui/presence-ember";
+import type { PresenceState } from "@/lib/presence";
 import { cn } from "@/lib/utils/cn";
 
 /**

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { displayNameSchema, usernameSchema } from "@/features/auth/schema";
+import { displayNameSchema, usernameSchema } from "@/lib/validation";
 
 /**
  * Profile validation.

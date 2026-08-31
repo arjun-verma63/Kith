@@ -5,8 +5,8 @@ import { useFormStatus } from "react-dom";
 
 import { Button } from "@/components/ui/button";
 import { resendVerificationAction, signOutAction } from "@/features/auth/actions";
-import { FormBanner } from "@/features/auth/components/auth-form";
-import { idleFormState } from "@/features/auth/schema";
+import { FormBanner } from "@/components/ui/form";
+import { idleFormState } from "@/lib/forms";
 
 export function VerifyEmailActions({ email }: { email: string }) {
   const [state, resendAction] = useActionState(resendVerificationAction, idleFormState);

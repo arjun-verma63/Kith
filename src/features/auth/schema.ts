@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { displayNameSchema, usernameSchema } from "@/lib/validation";
+
 /**
  * Validation for every authentication input.
  *
@@ -30,22 +32,6 @@ export const passwordSchema = z
   .refine((value) => value.trim().length > 0, {
     message: "A password cannot be only spaces.",
   });
-
-export const usernameSchema = z
-  .string()
-  .trim()
-  .min(3, "At least 3 characters.")
-  .max(20, "At most 20 characters.")
-  .regex(/^[A-Za-z0-9_]+$/, "Letters, numbers and underscores only.")
-  .refine((value) => !/^\d+$/.test(value), {
-    message: "A username cannot be only numbers.",
-  });
-
-export const displayNameSchema = z
-  .string()
-  .trim()
-  .min(1, "Tell us what to call you.")
-  .max(40, "That is a bit long — 40 characters at most.");
 
 /** Invite codes are compared by hash; the shape check is only to catch typos. */
 export const inviteCodeSchema = z
@@ -93,32 +79,3 @@ export type SignInInput = z.infer<typeof signInSchema>;
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
-
-/* -------------------------------------------------------------------------- */
-
-/**
- * What a form gets back from a server action.
- *
- * `fieldErrors` is keyed by input name so each message can be rendered against
- * the field it belongs to and wired to it with `aria-describedby`, rather than
- * dumped in a banner at the top and left for the user to match up.
- */
-export type AuthFormState =
-  | { status: "idle" }
-  | { status: "error"; message: string; fieldErrors?: Record<string, string[]> }
-  | { status: "success"; message: string };
-
-export const idleFormState: AuthFormState = { status: "idle" };
-
-/** Turns a Zod failure into field-keyed messages for the form. */
-export function toFieldErrors(error: z.ZodError): Record<string, string[]> {
-  const fieldErrors: Record<string, string[]> = {};
-
-  for (const issue of error.issues) {
-    const key = issue.path[0];
-    if (typeof key !== "string") continue;
-    (fieldErrors[key] ??= []).push(issue.message);
-  }
-
-  return fieldErrors;
-}

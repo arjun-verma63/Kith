@@ -1,14 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useFormStatus } from "react-dom";
 import type { ComponentProps, ReactNode } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Icon, KithMark } from "@/components/ui/icon";
+import { KithMark } from "@/components/ui/icon";
 import { PresenceEmber } from "@/components/ui/presence-ember";
-import type { AuthFormState } from "@/features/auth/schema";
-import { cn } from "@/lib/utils/cn";
 
 /**
  * The shared furniture for every authentication page.
@@ -73,64 +69,6 @@ export function AuthShell({
         </div>
       </aside>
     </main>
-  );
-}
-
-/**
- * Form-level result banner.
- *
- * `role="alert"` so a failure is announced rather than only shown — a
- * screen-reader user who submits and gets silence has no idea anything happened.
- * The banner is also the focus target for form-level errors that belong to no
- * particular field.
- */
-export function FormBanner({ state }: { state: AuthFormState }) {
-  if (state.status === "idle") return null;
-
-  const isError = state.status === "error";
-
-  return (
-    <div
-      role={isError ? "alert" : "status"}
-      aria-live={isError ? "assertive" : "polite"}
-      className={cn(
-        "mb-5 flex items-start gap-2.5 rounded-soft border px-3.5 py-3 text-sm",
-        isError
-          ? "border-[color-mix(in_oklab,var(--signal)_35%,transparent)] bg-[color-mix(in_oklab,var(--signal)_10%,transparent)] text-signal"
-          : "border-[color-mix(in_oklab,var(--moss)_35%,transparent)] bg-[color-mix(in_oklab,var(--moss)_10%,transparent)] text-moss",
-      )}
-    >
-      <Icon name={isError ? "alert" : "check"} size={15} className="mt-0.5 shrink-0" />
-      <span className="leading-body">{state.message}</span>
-    </div>
-  );
-}
-
-/**
- * Submit button wired to the form's own pending state.
- *
- * `useFormStatus` reads it from the enclosing form, which means the button
- * cannot get out of sync with the submission — and it keeps working if
- * JavaScript is slow to arrive, because the form posts to the action either way.
- */
-export function SubmitButton({ children, idleLabel }: { children?: ReactNode; idleLabel: string }) {
-  const { pending } = useFormStatus();
-
-  return (
-    <Button type="submit" variant="primary" size="lg" fullWidth loading={pending}>
-      {children ?? idleLabel}
-    </Button>
-  );
-}
-
-/** Disables every control in the form while it is in flight. */
-export function FormFields({ children }: { children: ReactNode }) {
-  const { pending } = useFormStatus();
-
-  return (
-    <fieldset disabled={pending} className="flex flex-col gap-5 disabled:opacity-60">
-      {children}
-    </fieldset>
   );
 }
 

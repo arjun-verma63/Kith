@@ -11,8 +11,7 @@
 
 import { asService, asUser, createUser, freshDatabase } from "./harness.mjs";
 
-const { derivePresence, describeLastSeen, formatBirthday } =
-  await import("../../src/features/profile/presence.ts");
+const { formatBirthday } = await import("../../src/features/profile/presence.ts");
 const { isOwnAvatarPath, parseBirthdayFields } =
   await import("../../src/features/profile/schema.ts");
 
@@ -38,85 +37,10 @@ const section = (t) => console.log(`\n${t}`);
 console.log("KITH — profiles\n");
 
 /* ========================================================================== */
-section("presence derivation");
+section("profile formatting");
 
-const NOW = new Date("2026-08-31T12:00:00Z");
-const ago = (min) => new Date(NOW.getTime() - min * 60000).toISOString();
-
-eq(
-  "seen 30s ago -> lit",
-  derivePresence({ status: "auto", lastSeenAt: ago(0.5), now: NOW }),
-  "lit",
-);
-eq(
-  "seen 5m ago -> cooling",
-  derivePresence({ status: "auto", lastSeenAt: ago(5), now: NOW }),
-  "cooling",
-);
-eq(
-  "seen 2h ago -> dark",
-  derivePresence({ status: "auto", lastSeenAt: ago(120), now: NOW }),
-  "dark",
-);
-
-// The declaration must beat the observation, or the setting is a lie.
-eq(
-  "invisible overrides a live heartbeat",
-  derivePresence({ status: "invisible", lastSeenAt: ago(0.1), now: NOW }),
-  "dark",
-);
-eq(
-  "away overrides a live heartbeat",
-  derivePresence({ status: "away", lastSeenAt: ago(0.1), now: NOW }),
-  "cooling",
-);
-eq(
-  "busy overrides a live heartbeat",
-  derivePresence({ status: "busy", lastSeenAt: ago(0.1), now: NOW }),
-  "cooling",
-);
-// ...but a stale "active" must not keep somebody lit forever.
-eq(
-  "active does NOT survive a 3-day absence",
-  derivePresence({ status: "active", lastSeenAt: ago(60 * 24 * 3), now: NOW }),
-  "dark",
-);
-eq(
-  "garbage timestamp -> dark",
-  derivePresence({ status: "auto", lastSeenAt: "not-a-date", now: NOW }),
-  "dark",
-);
-
-eq(
-  "describes a live user as Online",
-  describeLastSeen({ status: "auto", lastSeenAt: ago(0.5), now: NOW }),
-  "Online",
-);
-eq(
-  "describes invisible as Offline, never 'now'",
-  describeLastSeen({ status: "invisible", lastSeenAt: ago(0.1), now: NOW }),
-  "Offline",
-);
-eq(
-  "coarse minutes",
-  describeLastSeen({ status: "auto", lastSeenAt: ago(42), now: NOW }),
-  "42 minutes ago",
-);
-eq(
-  "coarse hours",
-  describeLastSeen({ status: "auto", lastSeenAt: ago(200), now: NOW }),
-  "3 hours ago",
-);
-eq(
-  "yesterday",
-  describeLastSeen({ status: "auto", lastSeenAt: ago(60 * 30), now: NOW }),
-  "Yesterday",
-);
-eq(
-  "beyond a week is not precise",
-  describeLastSeen({ status: "auto", lastSeenAt: ago(60 * 24 * 40), now: NOW }),
-  "A while ago",
-);
+// Presence derivation moved to lib/presence.ts and is covered by
+// supabase/tests/presence.test.mjs. What remains here is profile-specific.
 
 eq("birthday renders day and month, never the year", formatBirthday("1994-03-12"), "12 March");
 eq("no birthday renders nothing", formatBirthday(null), null);

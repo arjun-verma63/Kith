@@ -5,16 +5,11 @@ import { useActionState } from "react";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { signUpAction } from "@/features/auth/actions";
-import {
-  AuthAside,
-  AuthLink,
-  FormBanner,
-  FormFields,
-  SubmitButton,
-} from "@/features/auth/components/auth-form";
-import { fieldError } from "@/features/auth/components/field-error";
+import { AuthAside, AuthLink } from "@/features/auth/components/auth-form";
+import { FormBanner, FormFields, SubmitButton } from "@/components/ui/form";
+import { fieldError } from "@/lib/forms";
 import { PasswordField } from "@/features/auth/components/password-field";
-import { idleFormState } from "@/features/auth/schema";
+import { idleFormState } from "@/lib/forms";
 
 export function SignupForm({ inviteCode }: { inviteCode?: string | undefined }) {
   const [state, formAction] = useActionState(signUpAction, idleFormState);

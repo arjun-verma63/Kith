@@ -1,3 +1,4 @@
+import type { PresenceState } from "@/lib/presence";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -11,8 +12,6 @@ import { cn } from "@/lib/utils/cn";
  * ember exposes a text label, so the meaning survives greyscale, colour blindness
  * and motion-off.
  */
-
-export type PresenceState = "lit" | "cooling" | "dark";
 
 const STATE_LABEL: Record<PresenceState, string> = {
   lit: "Online",
