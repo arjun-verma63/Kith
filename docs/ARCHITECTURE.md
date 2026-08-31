@@ -192,32 +192,35 @@ treating it as fatal would end good calls on every network handover.
 
 ## 8. Games
 
-Every game is a **pure TypeScript module**:
+> Architecture implemented; no individual game built yet. **[GAMES.md](GAMES.md) is the
+> detailed reference.**
 
-```
-GameDefinition<State, Move, View>
-  init(seed, players)             → State
-  validate(state, move, playerId) → Result
-  apply(state, move)              → State
-  view(state, playerId)           → View     // redaction happens here
-  status(state)                   → active | { finished, results }
-```
+Games run inside KITH, in a conversation, with the people already in it — never as a
+link somewhere else. The room is the guest list, which is why starting a game asks
+which conversation rather than who to invite.
 
-Pure, deterministic, seeded RNG, no I/O. One implementation gives us optimistic client
-play, server authority, replay from `game_moves`, and unit tests.
+**The client cannot author game state.** `game_sessions.state` and `game_moves` have no
+client-facing write path; `start_game_session` and `commit_game_move` are executable by
+the service role alone. If clients could write state, cheating would be a fetch call,
+and hidden information would have to be broadcast to everybody in order to be checkable.
 
-Two execution models: **turn-based** (client posts a move, a Node route handler
-validates and applies it, then `UPDATE ... WHERE state_version = $n`; a lost race returns
-409 and the client resyncs) and **real-time host-authoritative** (host runs a fixed tick
-and broadcasts snapshots, checkpointing to Postgres every few seconds so a host crash is
-recoverable). Authority lives in Node rather than plpgsql because the rules are
-TypeScript and two implementations of one ruleset is not maintainable.
+Validation is split, and the split is the design:
 
-Hidden information never leaves the server: `view(state, playerId)` produces a redacted
-per-player projection. The public part goes on `game:{id}`, the private part on
-`user:{playerId}`.
+- **The engine** (TypeScript, `server-only`) decides whether a move is LEGAL. Pure
+  function of state and move — no clock, no randomness, no network. Never runs in a
+  browser.
+- **The database** decides whether it is PERMITTED: in this game, game running, your
+  turn, and computed from the current state. None of that needs to know what game it
+  is, so it holds for every game ever added.
 
-Adding a game is one folder under `features/games/titles/<slug>/` and one row in `games`.
+`turn_seat` is a column rather than a field in the opaque state blob, which is what
+makes turn order enforceable without Postgres understanding the game. `state_version`
+gives optimistic concurrency: a move computed from a stale state updates zero rows and
+the client resyncs.
+
+Adding a game is a file implementing `GameEngine`, one `registerEngine` call, and a
+migration enabling its catalogue row. The lobby, seating, readiness, turn indicator,
+scoring, winner and rematch are written once and inherited.
 
 ## 9. Deployment
 

@@ -195,13 +195,10 @@ section("games and couples");
 
 await asService(db, "update public.games set enabled = true where key='trivia-night'");
 
-await asUser(
-  db,
-  ada,
-  `insert into public.game_sessions (game_key, conversation_id, host_id, status, state_version, state)
-   values ('trivia-night', $1, $2, 'lobby', 0, '{}'::jsonb)`,
-  [conversationId, ada],
-);
+// Through the RPC, because migration 0017 revoked INSERT on `game_sessions` from
+// `authenticated` — the client cannot author a session any more than it can
+// author game state, and this test was written before that was true.
+await asUser(db, ada, "select public.create_game_session($1, 'trivia-night')", [conversationId]);
 eq("starting a game invites the other members", await countFor(db, rafa, "game_invite"), 1);
 eq("  and not the host", await countFor(db, ada, "game_invite"), 0);
 
@@ -354,7 +351,14 @@ eq(
   "/messages/abc",
 );
 eq("a message with no conversation id has no link", describe("message", {}).href, null);
-eq("a game invite has no link yet, rather than a 404", describe("game_invite").href, null);
+// Games landed, so this now goes somewhere. It used to assert null, when
+// `/games` did not exist.
+eq(
+  "a game invite links to the session",
+  describe("game_invite", { session_id: "abc" }).href,
+  "/games/abc",
+);
+eq("and to the shelf when the payload has no session", describe("game_invite", {}).href, "/games");
 eq("an unknown actor falls back", describe("friend_request", {}, null).actor, "Someone");
 eq(
   "an accepted couple proposal reads differently",

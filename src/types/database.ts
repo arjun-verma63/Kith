@@ -371,6 +371,8 @@ export type Database = {
           updated_at: string;
           started_at: string | null;
           ended_at: string | null;
+          turn_seat: number | null;
+          rematch_of: string | null;
         };
         Insert: {
           id?: string;
@@ -387,6 +389,8 @@ export type Database = {
           updated_at?: string;
           started_at?: string | null;
           ended_at?: string | null;
+          turn_seat?: number | null;
+          rematch_of?: string | null;
         };
         Update: {
           id?: string;
@@ -403,6 +407,8 @@ export type Database = {
           updated_at?: string;
           started_at?: string | null;
           ended_at?: string | null;
+          turn_seat?: number | null;
+          rematch_of?: string | null;
         };
         Relationships: [];
       };
@@ -721,6 +727,10 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      abandon_stale_games: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
+      };
       answer_call: {
         Args: {
           p_call_id: string;
@@ -737,6 +747,15 @@ export type Database = {
         Args: {
           p_call_id: string;
           p_event: string;
+        };
+        Returns: undefined;
+      };
+      broadcast_game: {
+        Args: {
+          p_session_id: string;
+          p_event: string;
+          p_public: Json;
+          p_private?: Json | null;
         };
         Returns: undefined;
       };
@@ -759,15 +778,43 @@ export type Database = {
         };
         Returns: boolean;
       };
+      can_start_game: {
+        Args: {
+          p_session_id: string;
+        };
+        Returns: boolean;
+      };
       can_view_game_session: {
         Args: {
           target_session: string;
         };
         Returns: boolean;
       };
+      commit_game_move: {
+        Args: {
+          p_session_id: string;
+          p_actor: string;
+          p_expected_version: number;
+          p_state: Json;
+          p_move: Json;
+          p_turn_seat?: number | null;
+          p_scores?: Json | null;
+          p_finished?: boolean | null;
+        };
+        Returns: number;
+      };
       consume_invite: {
         Args: {
           p_code_hash: string;
+        };
+        Returns: string;
+      };
+      create_game_session: {
+        Args: {
+          p_conversation_id: string;
+          p_game_key: string;
+          p_config?: Json | null;
+          p_rematch_of?: string | null;
         };
         Returns: string;
       };
@@ -803,6 +850,33 @@ export type Database = {
             other_display_name: string | null;
             other_avatar_path: string | null;
             participant_count: number | null;
+        }[];
+      };
+      get_game_session: {
+        Args: {
+          p_session_id: string;
+        };
+        Returns: {
+            id: string | null;
+            game_key: string | null;
+            game_name: string | null;
+            min_players: number | null;
+            max_players: number | null;
+            pace: Database["public"]["Enums"]["game_pace"] | null;
+            conversation_id: string | null;
+            host_id: string | null;
+            status: Database["public"]["Enums"]["game_status"] | null;
+            state: Json | null;
+            state_version: number | null;
+            turn_seat: number | null;
+            seed: number | null;
+            config: Json | null;
+            rematch_of: string | null;
+            created_at: string | null;
+            started_at: string | null;
+            ended_at: string | null;
+            my_seat: number | null;
+            can_start: boolean | null;
         }[];
       };
       has_answered_prompt: {
@@ -852,6 +926,18 @@ export type Database = {
           p_username: string;
         };
         Returns: boolean;
+      };
+      join_game_session: {
+        Args: {
+          p_session_id: string;
+        };
+        Returns: number;
+      };
+      leave_game_session: {
+        Args: {
+          p_session_id: string;
+        };
+        Returns: undefined;
       };
       list_calls: {
         Args: {
@@ -932,6 +1018,54 @@ export type Database = {
             friends_since: string | null;
         }[];
       };
+      list_game_players: {
+        Args: {
+          p_session_id: string;
+        };
+        Returns: {
+            user_id: string | null;
+            username: string | null;
+            display_name: string | null;
+            avatar_path: string | null;
+            seat: number | null;
+            is_ready: boolean | null;
+            score: number | null;
+            placement: number | null;
+            is_host: boolean | null;
+            left_at: string | null;
+        }[];
+      };
+      list_game_sessions: {
+        Args: {
+          p_conversation_id: string;
+          p_limit?: number | null;
+        };
+        Returns: {
+            id: string | null;
+            game_key: string | null;
+            game_name: string | null;
+            status: Database["public"]["Enums"]["game_status"] | null;
+            host_id: string | null;
+            player_count: number | null;
+            max_players: number | null;
+            am_i_in: boolean | null;
+            created_at: string | null;
+            ended_at: string | null;
+        }[];
+      };
+      list_games: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+            key: string | null;
+            name: string | null;
+            tagline: string | null;
+            audience: Database["public"]["Enums"]["game_audience"] | null;
+            pace: Database["public"]["Enums"]["game_pace"] | null;
+            min_players: number | null;
+            max_players: number | null;
+            enabled: boolean | null;
+        }[];
+      };
       list_messages: {
         Args: {
           p_conversation_id: string;
@@ -953,6 +1087,26 @@ export type Database = {
             sender_display_name: string | null;
             sender_avatar_path: string | null;
             reactions: Json | null;
+        }[];
+      };
+      list_my_game_sessions: {
+        Args: {
+          p_limit?: number | null;
+        };
+        Returns: {
+            id: string | null;
+            game_key: string | null;
+            game_name: string | null;
+            status: Database["public"]["Enums"]["game_status"] | null;
+            conversation_id: string | null;
+            conversation_title: string | null;
+            player_count: number | null;
+            max_players: number | null;
+            my_seat: number | null;
+            my_score: number | null;
+            my_placement: number | null;
+            created_at: string | null;
+            ended_at: string | null;
         }[];
       };
       list_notifications: {
@@ -1029,6 +1183,13 @@ export type Database = {
         };
         Returns: undefined;
       };
+      set_game_ready: {
+        Args: {
+          p_session_id: string;
+          p_ready: boolean;
+        };
+        Returns: undefined;
+      };
       start_call: {
         Args: {
           p_conversation_id: string;
@@ -1041,6 +1202,15 @@ export type Database = {
           other_user: string;
         };
         Returns: string;
+      };
+      start_game_session: {
+        Args: {
+          p_session_id: string;
+          p_actor: string;
+          p_state: Json;
+          p_turn_seat?: number | null;
+        };
+        Returns: number;
       };
       start_group: {
         Args: {

@@ -1,0 +1,263 @@
+import "server-only";
+
+import { BUCKETS, SIGNED_URL_TTL_SECONDS } from "@/lib/supabase/storage";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/database";
+
+/**
+ * Game reads.
+ *
+ * Through the cookie-bound client throughout, so Row Level Security decides what
+ * comes back. `get_game_session` returns the full state only to somebody at the
+ * table — a spectator gets the shape of the game and none of its contents, which
+ * is enforced in SQL rather than by filtering here.
+ */
+
+type Fn = Database["public"]["Functions"];
+
+export type GameRow = Fn["list_games"]["Returns"][number];
+export type SessionRow = Fn["get_game_session"]["Returns"][number];
+export type PlayerRow = Fn["list_game_players"]["Returns"][number];
+export type SessionSummaryRow = Fn["list_game_sessions"]["Returns"][number];
+
+export interface CatalogueGame {
+  key: string;
+  name: string;
+  tagline: string | null;
+  audience: "group" | "couple";
+  pace: "turn_based" | "realtime";
+  minPlayers: number;
+  maxPlayers: number;
+  /**
+   * Whether it can actually be played.
+   *
+   * Two things have to be true — a registered engine and this flag — and the
+   * catalogue only knows about the flag. A game shows on the shelf either way;
+   * one that is off shows as coming rather than being hidden, because an empty
+   * shelf tells nobody anything.
+   */
+  enabled: boolean;
+}
+
+export async function listGames(): Promise<CatalogueGame[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("list_games");
+
+  if (error || !data) return [];
+
+  return data.flatMap((row) =>
+    row.key
+      ? [
+          {
+            key: row.key,
+            name: row.name ?? row.key,
+            tagline: row.tagline,
+            audience: row.audience ?? "group",
+            pace: row.pace ?? "turn_based",
+            minPlayers: row.min_players ?? 2,
+            maxPlayers: row.max_players ?? 6,
+            enabled: row.enabled ?? false,
+          },
+        ]
+      : [],
+  );
+}
+
+export interface GamePlayer {
+  userId: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  seat: number;
+  isReady: boolean;
+  score: number;
+  placement: number | null;
+  isHost: boolean;
+  hasLeft: boolean;
+}
+
+export interface GameSession {
+  id: string;
+  gameKey: string;
+  gameName: string;
+  minPlayers: number;
+  maxPlayers: number;
+  pace: "turn_based" | "realtime";
+  conversationId: string | null;
+  hostId: string;
+  status: "lobby" | "active" | "finished" | "abandoned";
+  /** Empty for a spectator — the database withholds it, not this file. */
+  state: unknown;
+  stateVersion: number;
+  turnSeat: number | null;
+  config: Record<string, unknown>;
+  rematchOf: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  /** Null when watching rather than playing. */
+  mySeat: number | null;
+  canStart: boolean;
+  players: GamePlayer[];
+}
+
+async function signAvatars(paths: (string | null)[]): Promise<Map<string, string>> {
+  const unique = [...new Set(paths.filter((p): p is string => Boolean(p)))];
+  if (unique.length === 0) return new Map();
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.storage
+    .from(BUCKETS.avatars)
+    .createSignedUrls(unique, SIGNED_URL_TTL_SECONDS);
+
+  const signed = new Map<string, string>();
+  if (error || !data) return signed;
+
+  for (const entry of data) {
+    if (entry.path && entry.signedUrl) signed.set(entry.path, entry.signedUrl);
+  }
+  return signed;
+}
+
+export async function getGameSession(sessionId: string): Promise<GameSession | null> {
+  const supabase = await createSupabaseServerClient();
+
+  const [{ data: sessions }, { data: players }] = await Promise.all([
+    supabase.rpc("get_game_session", { p_session_id: sessionId }),
+    supabase.rpc("list_game_players", { p_session_id: sessionId }),
+  ]);
+
+  const row = sessions?.[0];
+  if (!row?.id) return null;
+
+  const signed = await signAvatars((players ?? []).map((p) => p.avatar_path));
+
+  return {
+    id: row.id,
+    gameKey: row.game_key ?? "",
+    gameName: row.game_name ?? "",
+    minPlayers: row.min_players ?? 2,
+    maxPlayers: row.max_players ?? 6,
+    pace: row.pace ?? "turn_based",
+    conversationId: row.conversation_id,
+    hostId: row.host_id ?? "",
+    status: row.status ?? "lobby",
+    state: row.state ?? {},
+    stateVersion: row.state_version ?? 0,
+    turnSeat: row.turn_seat,
+    config: (row.config ?? {}) as Record<string, unknown>,
+    rematchOf: row.rematch_of,
+    createdAt: row.created_at ?? new Date().toISOString(),
+    startedAt: row.started_at,
+    endedAt: row.ended_at,
+    mySeat: row.my_seat,
+    canStart: row.can_start ?? false,
+    players: (players ?? []).flatMap((p) =>
+      p.user_id
+        ? [
+            {
+              userId: p.user_id,
+              username: p.username ?? "",
+              displayName: p.display_name ?? "",
+              avatarUrl: p.avatar_path ? (signed.get(p.avatar_path) ?? null) : null,
+              seat: p.seat ?? 0,
+              isReady: p.is_ready ?? false,
+              score: p.score ?? 0,
+              placement: p.placement,
+              isHost: p.is_host ?? false,
+              hasLeft: p.left_at !== null,
+            },
+          ]
+        : [],
+    ),
+  };
+}
+
+export interface SessionSummary {
+  id: string;
+  gameKey: string;
+  gameName: string;
+  status: "lobby" | "active" | "finished" | "abandoned";
+  playerCount: number;
+  maxPlayers: number;
+  amIIn: boolean;
+  createdAt: string;
+}
+
+export async function listSessionsIn(conversationId: string): Promise<SessionSummary[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("list_game_sessions", {
+    p_conversation_id: conversationId,
+    p_limit: 20,
+  });
+
+  if (error || !data) return [];
+
+  return data.flatMap((row) =>
+    row.id
+      ? [
+          {
+            id: row.id,
+            gameKey: row.game_key ?? "",
+            gameName: row.game_name ?? "",
+            status: row.status ?? "lobby",
+            playerCount: row.player_count ?? 0,
+            maxPlayers: row.max_players ?? 6,
+            amIIn: row.am_i_in ?? false,
+            createdAt: row.created_at ?? new Date().toISOString(),
+          },
+        ]
+      : [],
+  );
+}
+
+export interface MySession {
+  id: string;
+  gameKey: string;
+  gameName: string;
+  status: "lobby" | "active" | "finished" | "abandoned";
+  conversationId: string | null;
+  conversationTitle: string | null;
+  playerCount: number;
+  maxPlayers: number;
+  mySeat: number;
+  myScore: number;
+  myPlacement: number | null;
+  createdAt: string;
+  endedAt: string | null;
+}
+
+/**
+ * Every game this person is in, across every conversation.
+ *
+ * The hub is a place you go, not something you find inside one thread, so this
+ * is deliberately not scoped to a room. Live sessions come first.
+ */
+export async function listMySessions(): Promise<MySession[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("list_my_game_sessions", { p_limit: 20 });
+
+  if (error || !data) return [];
+
+  return data.flatMap((row) =>
+    row.id
+      ? [
+          {
+            id: row.id,
+            gameKey: row.game_key ?? "",
+            gameName: row.game_name ?? "",
+            status: row.status ?? "lobby",
+            conversationId: row.conversation_id,
+            conversationTitle: row.conversation_title,
+            playerCount: row.player_count ?? 0,
+            maxPlayers: row.max_players ?? 6,
+            mySeat: row.my_seat ?? 0,
+            myScore: row.my_score ?? 0,
+            myPlacement: row.my_placement,
+            createdAt: row.created_at ?? new Date().toISOString(),
+            endedAt: row.ended_at,
+          },
+        ]
+      : [],
+  );
+}

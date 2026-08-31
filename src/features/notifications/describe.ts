@@ -68,10 +68,14 @@ export function describeNotification(notification: AppNotification): DescribedNo
       };
     }
 
-    case "game_invite":
-      // `/games` does not exist yet. Rendered without a link rather than
-      // pointing at a route that would 404.
-      return { actor, action: "started a game", href: null };
+    case "game_invite": {
+      const session = field(payload, "session_id");
+      return {
+        actor,
+        action: "started a game",
+        href: session ? (`/games/${session}` as Route) : "/games",
+      };
+    }
 
     case "couple_request":
       return {

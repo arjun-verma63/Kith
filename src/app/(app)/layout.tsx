@@ -80,6 +80,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
                   Calls
                 </Link>
 
+                <Link
+                  href="/games"
+                  className="control-focus link-grow rounded-edge text-sm text-fg-dim"
+                >
+                  Games
+                </Link>
+
                 <RoomCount friendIds={friends.map((friend) => friend.id)} />
 
                 <NotificationBell

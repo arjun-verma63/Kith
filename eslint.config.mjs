@@ -18,6 +18,7 @@ const FEATURE_SLICES = [
   "auth",
   "calls",
   "friends",
+  "games",
   "landing",
   "messages",
   "notifications",
