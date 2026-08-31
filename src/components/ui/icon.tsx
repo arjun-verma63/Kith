@@ -55,6 +55,10 @@ const PATHS = {
     "M3.5 7.7a2.2 2.2 0 0 1 2.2-2.2h7a2.2 2.2 0 0 1 2.2 2.2v8.6a2.2 2.2 0 0 1-2.2 2.2h-7a2.2 2.2 0 0 1-2.2-2.2ZM14.9 10.6l5.6-3.1v9l-5.6-3.1",
   screen:
     "M3.5 6.2A1.7 1.7 0 0 1 5.2 4.5h13.6a1.7 1.7 0 0 1 1.7 1.7v9.1a1.7 1.7 0 0 1-1.7 1.7H5.2a1.7 1.7 0 0 1-1.7-1.7ZM8.5 20.5h7M12 17v3.5",
+  // Direction markers for the call log. An arrow into the corner is a call that
+  // came in; an arrow out of it is one that went out.
+  callIncoming: "M19 5 9.5 14.5M9.5 14.5H15.5M9.5 14.5V8.5",
+  callOutgoing: "M5 19 14.5 9.5M14.5 9.5H8.5M14.5 9.5V15.5",
 
   // --- Status and moderation ---
   alert: "M12 4.5 21 19.5H3ZM12 10v4M12 16.8v.2",

@@ -35,6 +35,14 @@ export interface UseLocalMediaOptions {
 
 export interface LocalMediaApi {
   stream: MediaStream | null;
+  /**
+   * Whether capture succeeded, readable immediately after `await start()`.
+   *
+   * `stream` is React state and does not update until the next render, so a
+   * caller that awaits `start()` and then branches on it always sees the old
+   * value. This reads the controller directly.
+   */
+  hasStream: () => boolean;
   media: MediaState;
   error: MediaError | null;
   /** True while the camera is being acquired — the toggle should show it. */
@@ -103,6 +111,8 @@ export function useLocalMedia(options: UseLocalMediaOptions = {}): LocalMediaApi
     }
   }, []);
 
+  const hasStream = useCallback(() => controller.current?.getStream() !== null, []);
+
   const stop = useCallback(() => {
     controller.current?.stop();
     setStream(null);
@@ -169,6 +179,7 @@ export function useLocalMedia(options: UseLocalMediaOptions = {}): LocalMediaApi
 
   return {
     stream,
+    hasStream,
     media,
     error,
     busy,

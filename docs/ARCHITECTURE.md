@@ -153,8 +153,9 @@ throttled to a fixed tick rate. This is designed in, not retrofitted.
 
 ## 7. WebRTC
 
-> Implemented as of the WebRTC foundation phase. **[docs/WEBRTC.md](WEBRTC.md) is the
-> detailed reference**; this section is the summary and records where the plan moved.
+> Implemented. **[WEBRTC.md](WEBRTC.md) is the detailed reference for the connection,
+> [CALLS.md](CALLS.md) for the call lifecycle**; this section is the summary and records
+> where the plan moved.
 
 **Full mesh**, which is optimal for 1:1 and sound to about four participants — upstream
 bandwidth and CPU grow linearly with peers. Group video is capped at 4 with an explicit

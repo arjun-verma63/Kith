@@ -5,7 +5,7 @@ Voice and video for a room of six people, built peer to peer.
 This document covers the foundation: how a connection is made, who is
 responsible for what, and — just as importantly — what deliberately does not
 exist yet. The call UI, ringing, and the `calls` lifecycle sit on top of this and
-are a later phase.
+are covered by [CALLS.md](CALLS.md).
 
 ---
 
@@ -334,8 +334,8 @@ the selected route.
 
 Deliberately out of scope for this phase:
 
-- **The call UI** — ringing, answering, declining, the in-call surface.
-- **The call lifecycle** — creating `calls` rows, marking missed, ending.
+- ~~The call UI~~ and ~~the call lifecycle~~ — both built. See
+  [CALLS.md](CALLS.md).
 - **TURN** — see §8.
 - **Group calls.** The architecture is ready: one `KithPeer` per remote
   participant in a mesh, one shared local stream. At six people a mesh is the

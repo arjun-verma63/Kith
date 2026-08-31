@@ -192,6 +192,12 @@ const DEFAULT_PRIVILEGES = /* sql */ `
     grant all on tables to anon, authenticated, service_role;
 
   grant all on all tables in schema realtime to anon, authenticated, service_role;
+
+  -- And the sequences behind them. Without this, a test that inserts into the
+  -- realtime.messages stub fails on its sequence rather than on the policy it
+  -- meant to exercise — which reads exactly like the policy denying it, and is
+  -- how a channel-authorization test can pass for the wrong reason.
+  grant usage, select on all sequences in schema realtime to anon, authenticated, service_role;
   grant all on all tables in schema storage to anon, authenticated, service_role;
   grant all on all tables in schema auth to service_role;
   grant select on auth.users to authenticated;
@@ -244,6 +250,37 @@ export async function asUser(db, userId, sql, params = []) {
     await db.query("select set_config('request.jwt.claims', $1, true)", [
       JSON.stringify({ sub: userId, role: "authenticated", aal: "aal1" }),
     ]);
+    await db.exec("set local role authenticated");
+    const result = await db.query(sql, params);
+    await db.exec("commit");
+    return result;
+  } catch (error) {
+    await db.exec("rollback");
+    throw error;
+  }
+}
+
+/**
+ * Runs as a signed-in user who is subscribed to a realtime channel.
+ *
+ * `realtime.topic()` is how migration 0009's channel policies know which channel
+ * is being joined, and until now no test had ever evaluated those policies — the
+ * suites asserted the policies existed and stopped there. Existence is not
+ * behaviour: a policy that names the wrong helper still exists.
+ *
+ * With the topic set, `select`ing from `realtime.messages` answers "may this
+ * person subscribe to this channel?" and inserting answers "may they broadcast
+ * into it?" — which for a call is the difference between a private conversation
+ * and one a bystander can pick up.
+ */
+export async function asUserOnTopic(db, userId, topic, sql, params = []) {
+  await db.exec("begin");
+  try {
+    await db.query("select set_config('request.jwt.claim.sub', $1, true)", [userId]);
+    await db.query("select set_config('request.jwt.claims', $1, true)", [
+      JSON.stringify({ sub: userId, role: "authenticated", aal: "aal1" }),
+    ]);
+    await db.query("select set_config('realtime.topic', $1, true)", [topic]);
     await db.exec("set local role authenticated");
     const result = await db.query(sql, params);
     await db.exec("commit");

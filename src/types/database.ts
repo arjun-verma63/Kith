@@ -721,11 +721,24 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      answer_call: {
+        Args: {
+          p_call_id: string;
+        };
+        Returns: undefined;
+      };
       are_friends: {
         Args: {
           other_user: string;
         };
         Returns: boolean;
+      };
+      broadcast_call: {
+        Args: {
+          p_call_id: string;
+          p_event: string;
+        };
+        Returns: undefined;
       };
       can_add_conversation_member: {
         Args: {
@@ -757,6 +770,40 @@ export type Database = {
           p_code_hash: string;
         };
         Returns: string;
+      };
+      end_call: {
+        Args: {
+          p_call_id: string;
+          p_reason?: Database["public"]["Enums"]["call_end_reason"] | null;
+        };
+        Returns: undefined;
+      };
+      expire_abandoned_calls: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
+      };
+      expire_ringing_calls: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
+      };
+      get_active_call: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+            id: string | null;
+            conversation_id: string | null;
+            initiator_id: string | null;
+            kind: Database["public"]["Enums"]["call_kind"] | null;
+            status: Database["public"]["Enums"]["call_status"] | null;
+            started_at: string | null;
+            answered_at: string | null;
+            is_initiator: boolean | null;
+            joined_at: string | null;
+            other_user_id: string | null;
+            other_username: string | null;
+            other_display_name: string | null;
+            other_avatar_path: string | null;
+            participant_count: number | null;
+        }[];
       };
       has_answered_prompt: {
         Args: {
@@ -805,6 +852,31 @@ export type Database = {
           p_username: string;
         };
         Returns: boolean;
+      };
+      list_calls: {
+        Args: {
+          p_limit?: number | null;
+          p_before?: string | null;
+        };
+        Returns: {
+            id: string | null;
+            conversation_id: string | null;
+            initiator_id: string | null;
+            kind: Database["public"]["Enums"]["call_kind"] | null;
+            status: Database["public"]["Enums"]["call_status"] | null;
+            started_at: string | null;
+            answered_at: string | null;
+            ended_at: string | null;
+            end_reason: Database["public"]["Enums"]["call_end_reason"] | null;
+            is_initiator: boolean | null;
+            joined_at: string | null;
+            duration_seconds: number | null;
+            other_user_id: string | null;
+            other_username: string | null;
+            other_display_name: string | null;
+            other_avatar_path: string | null;
+            participant_count: number | null;
+        }[];
       };
       list_conversations: {
         Args: Record<PropertyKey, never>;
@@ -928,6 +1000,10 @@ export type Database = {
         };
         Returns: undefined;
       };
+      ring_timeout: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
       search_profiles: {
         Args: {
           p_query: string;
@@ -945,6 +1021,20 @@ export type Database = {
             last_seen_at: string | null;
             relationship: string | null;
         }[];
+      };
+      set_call_media_state: {
+        Args: {
+          p_call_id: string;
+          p_state: Json;
+        };
+        Returns: undefined;
+      };
+      start_call: {
+        Args: {
+          p_conversation_id: string;
+          p_kind?: Database["public"]["Enums"]["call_kind"] | null;
+        };
+        Returns: string;
       };
       start_dm: {
         Args: {

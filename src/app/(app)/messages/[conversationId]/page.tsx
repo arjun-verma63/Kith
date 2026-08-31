@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { LivePresenceLabel } from "@/components/presence/live-presence";
 import { Avatar } from "@/components/ui/avatar";
+import { CallButton } from "@/features/calls/components/call-button";
 import { Icon } from "@/components/ui/icon";
 import { MessageThread } from "@/features/messages/components/message-thread";
 import { listConversationMembers } from "@/features/messages/members";
@@ -74,7 +75,7 @@ export default async function ConversationPage({
           />
         ) : null}
 
-        <div className="flex min-w-0 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-sm text-fg-loud">{conversationName(conversation)}</span>
           {conversation.other ? (
             <LivePresenceLabel
@@ -89,6 +90,13 @@ export default async function ConversationPage({
             <span className="text-2xs text-fg-faint">{conversation.memberCount} people</span>
           )}
         </div>
+
+        {/* Voice only. The button is disabled while any call is live, because
+            there is only ever one. */}
+        <CallButton
+          conversationId={conversationId}
+          {...(conversation.other ? { peerName: conversation.other.displayName } : {})}
+        />
       </header>
 
       <MessageThread

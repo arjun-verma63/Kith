@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { KithMark } from "@/components/ui/icon";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { signOutAction } from "@/features/auth/actions";
+import { CallProvider } from "@/features/calls/call-provider";
+import { getActiveCall } from "@/features/calls/queries";
 import { PresenceProvider } from "@/components/presence/provider";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
 import { countUnreadNotifications, listNotifications } from "@/features/notifications/queries";
@@ -37,70 +39,84 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   // directory of everyone who happens to hold an account.
   // Fetched in parallel: three reads with nothing to say to each other should
   // not cost three sequential round trips on every page in the app.
-  const [friends, notifications, unread] = await Promise.all([
+  const [friends, notifications, unread, activeCall] = await Promise.all([
     listFriends(),
     listNotifications(),
     countUnreadNotifications(),
+    // Server-rendered so a refresh mid-call comes back to the call rather than
+    // quietly abandoning the other person.
+    getActiveCall(),
   ]);
 
   return (
     <PresenceProvider userId={profile.id} status={profile.status as DeclaredStatus}>
-      <div className="flex min-h-dvh flex-col">
-        {/* Two mechanisms, two jobs. The channel above answers "who is connected
+      <CallProvider userId={profile.id} initialCall={activeCall}>
+        <div className="flex min-h-dvh flex-col">
+          {/* Two mechanisms, two jobs. The channel above answers "who is connected
             right now" with no writes at all; this heartbeat keeps last_seen_at
             fresh so "last seen 20 minutes ago" still works after they leave and
             whenever the socket is down. */}
-        <PresenceHeartbeat />
+          <PresenceHeartbeat />
 
-        <header className="border-b border-line">
-          <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between gap-4 px-6 sm:px-10">
-            <Link href="/" className="control-focus flex items-center gap-2.5 rounded-edge">
-              <KithMark size={17} className="text-ember" />
-              <span className="display-wonk text-md text-fg-loud">KITH</span>
-            </Link>
-
-            <div className="flex items-center gap-3">
-              <Link
-                href="/messages"
-                className="control-focus link-grow rounded-edge text-sm text-fg-dim"
-              >
-                Messages
+          <header className="border-b border-line">
+            <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between gap-4 px-6 sm:px-10">
+              <Link href="/" className="control-focus flex items-center gap-2.5 rounded-edge">
+                <KithMark size={17} className="text-ember" />
+                <span className="display-wonk text-md text-fg-loud">KITH</span>
               </Link>
 
-              <RoomCount friendIds={friends.map((friend) => friend.id)} />
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/messages"
+                  className="control-focus link-grow rounded-edge text-sm text-fg-dim"
+                >
+                  Messages
+                </Link>
 
-              <NotificationBell
-                userId={profile.id}
-                initialNotifications={notifications}
-                initialUnread={unread}
-              />
+                <Link
+                  href="/calls"
+                  className="control-focus link-grow rounded-edge text-sm text-fg-dim"
+                >
+                  Calls
+                </Link>
 
-              <ThemeToggle className="hidden sm:inline-flex" />
+                <RoomCount friendIds={friends.map((friend) => friend.id)} />
 
-              <Link
-                href={`/u/${profile.username}`}
-                className="control-focus flex items-center gap-2 rounded-full"
-              >
-                <span className="hidden text-sm text-fg-dim sm:inline">{profile.display_name}</span>
-                <Avatar
-                  name={profile.display_name}
-                  seed={profile.id}
-                  size="xs"
-                  src={profile.avatarUrl}
+                <NotificationBell
+                  userId={profile.id}
+                  initialNotifications={notifications}
+                  initialUnread={unread}
                 />
-              </Link>
 
-              <form action={signOutAction}>
-                <Button type="submit" variant="ghost" size="sm">
-                  Sign out
-                </Button>
-              </form>
+                <ThemeToggle className="hidden sm:inline-flex" />
+
+                <Link
+                  href={`/u/${profile.username}`}
+                  className="control-focus flex items-center gap-2 rounded-full"
+                >
+                  <span className="hidden text-sm text-fg-dim sm:inline">
+                    {profile.display_name}
+                  </span>
+                  <Avatar
+                    name={profile.display_name}
+                    seed={profile.id}
+                    size="xs"
+                    src={profile.avatarUrl}
+                  />
+                </Link>
+
+                <form action={signOutAction}>
+                  <Button type="submit" variant="ghost" size="sm">
+                    Sign out
+                  </Button>
+                </form>
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        <main className="flex-1">{children}</main>
-      </div>
+          <main className="flex-1">{children}</main>
+        </div>
+      </CallProvider>
     </PresenceProvider>
   );
 }

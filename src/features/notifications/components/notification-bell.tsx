@@ -13,8 +13,7 @@ import {
 } from "@/features/notifications/actions";
 import { describeAge, describeNotification, toneFor } from "@/features/notifications/describe";
 import type { AppNotification } from "@/features/notifications/queries";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { channels, PRIVATE_CHANNEL } from "@/lib/supabase/realtime";
+import { subscribeToUserEvents } from "@/lib/supabase/user-channel";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -59,23 +58,20 @@ export function NotificationBell({
   }, []);
 
   // Live arrivals.
-  useEffect(() => {
-    const supabase = getSupabaseBrowserClient();
-    const channel = supabase.channel(channels.user(userId), PRIVATE_CHANNEL);
-
-    channel
-      .on("broadcast", { event: "notification.new" }, () => {
+  //
+  // Through the shared `user:{id}` subscription rather than a channel of its
+  // own: calls listen on the same topic, and two Phoenix joins on one topic over
+  // one socket is not a thing to rely on.
+  useEffect(
+    () =>
+      subscribeToUserEvents(userId, {
         // The payload carries the notification, but not the actor's profile or a
         // signed avatar URL. Re-reading is one query for something that happens
         // a handful of times a day, and it keeps one shape in one place.
-        reload();
-      })
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [userId, reload]);
+        "notification.new": () => reload(),
+      }),
+    [userId, reload],
+  );
 
   // Dismiss on an outside press, and on Escape with focus returned to the bell.
   useEffect(() => {
