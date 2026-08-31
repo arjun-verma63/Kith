@@ -30,7 +30,11 @@ const CLIENT_DIRS = [".next/static"];
 const SECRET_VARS = [
   "SUPABASE_SERVICE_ROLE_KEY",
   "SUPABASE_ACCESS_TOKEN",
+  // Both TURN credential shapes. A relay password in the bundle is an open
+  // bandwidth proxy for anybody who opens devtools, and unlike a database key
+  // there is no policy layer that limits the damage.
   "TURN_SHARED_SECRET",
+  "TURN_PASSWORD",
   "SMTP_PASSWORD",
 ];
 

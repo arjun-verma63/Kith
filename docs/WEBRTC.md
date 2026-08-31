@@ -236,30 +236,41 @@ intermittently slow, which is far harder to diagnose than a clean failure.
 
 ---
 
-## 8. STUN now, TURN later
+## 8. STUN and TURN
 
-`config.ts` ships two STUN providers (Google and Cloudflare) and no TURN.
+`config.ts` ships two public STUN providers. Relay entries are **passed in**,
+minted server-side per user with a short expiry — see [TURN.md](TURN.md) for
+where every credential lives and how to verify the relay actually works.
 
-STUN only tells a peer what its public address looks like from the outside; the
-two browsers still connect directly. That works for most home networks. It does
-**not** work behind symmetric NAT or a restrictive corporate firewall, where a
-relay is required — and a relay is what TURN is.
+STUN only tells a peer what its public address looks like from outside; the two
+browsers still connect directly. That covers most home networks and fails on
+symmetric NAT, carrier-grade NAT, and any firewall that drops UDP. For those, a
+TURN server relays the (still encrypted) media.
 
-TURN is deliberately not implemented yet, per the phase brief. The seam for it
-already exists:
+TURN is **optional and off by default**: with nothing configured, calls run on
+STUN exactly as they did before it existed. That is the graceful fallback and it
+is also what lets a fresh clone work without anybody signing up for a relay.
+
+The seam:
 
 ```ts
 buildIceConfiguration({ turnServers, forceRelay });
 ```
 
-Adding relays later is a value passed in, not a change to any negotiation code.
-When it lands, the credentials must be **short-lived and minted server-side** —
-a static TURN password in client JavaScript is a free bandwidth relay for
-anybody who opens devtools. `TURN_SHARED_SECRET` is already on the
-client-bundle scanner's forbidden list (`scripts/check-client-bundle.mjs`), so
-the day it appears in a browser bundle, the build fails.
+`config.ts` holds no credentials and reads no environment, which is what keeps it
+pure enough to test every branch without a network — and what keeps a relay
+password out of the browser bundle. `TURN_SHARED_SECRET` and `TURN_PASSWORD` are
+both on the client-bundle scanner's forbidden list
+(`scripts/check-client-bundle.mjs`), so the day either appears in client
+JavaScript, the build fails.
 
----
+Two details worth knowing:
+
+- `iceCandidatePoolSize` drops to `0` as soon as TURN is configured.
+  Pre-gathering would allocate a relay before anybody had called anybody.
+- `getStats()` reports the **route** — `direct` or `relayed` — read from the
+  selected candidate pair. On an open network a broken relay configuration looks
+  perfect, so this is the only honest answer to "is TURN doing anything?".
 
 ## 9. Using it
 

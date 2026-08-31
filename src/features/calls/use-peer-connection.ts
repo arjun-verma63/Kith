@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { createSupabaseSignaling } from "@/features/calls/supabase-signaling";
-import { KithPeer, type PeerState } from "@/lib/webrtc/peer";
+import { buildIceConfiguration } from "@/lib/webrtc/config";
+import { KithPeer, type IceRoute, type PeerState } from "@/lib/webrtc/peer";
 import { VideoPublisher } from "@/lib/webrtc/video";
 import {
   DEFAULT_MEDIA_STATE,
@@ -33,6 +34,17 @@ export interface UsePeerConnectionOptions {
   localStream: MediaStream | null;
   /** False keeps the hook dormant — nothing is created until the call is live. */
   enabled?: boolean;
+  /**
+   * Relay entries, already fetched.
+   *
+   * Passed in rather than fetched here so the connection is created the moment
+   * the call goes live: the provider asks for them while the phone is still
+   * ringing, which is dead time anyway. An empty list is a working answer —
+   * the call runs on STUN.
+   */
+  iceServers?: RTCIceServer[];
+  /** Called before an ICE restart, to replace credentials that may have expired. */
+  refreshIceServers?: () => Promise<RTCIceServer[] | null>;
   onHangup?: (reason: HangupReason) => void;
   /** Overridden in tests; defaults to Supabase Realtime. */
   createTransport?: (callId: string, selfId: string) => SignalingTransport;
@@ -40,6 +52,17 @@ export interface UsePeerConnectionOptions {
 
 export interface PeerConnectionApi {
   state: PeerState;
+  /**
+   * How the media is actually travelling.
+   *
+   * Read from the connection rather than from what we hoped we configured. On an
+   * open network every call connects directly, so a completely broken relay
+   * configuration looks perfect until the first person on a locked-down network
+   * tries to call somebody. This is what makes that visible.
+   */
+  route: IceRoute;
+  /** Round-trip time in seconds, or null before the first sample. */
+  rtt: number | null;
   remoteStream: MediaStream | null;
   /** What the other side says it is sending. Never inferred from the tracks. */
   remoteMedia: MediaState;
@@ -51,6 +74,9 @@ export interface PeerConnectionApi {
   setVideoTrack: (track: MediaStreamTrack | null) => Promise<void>;
 }
 
+/** How often to read the connection's route and round-trip time. */
+const STATS_INTERVAL_MS = 4000;
+
 export function usePeerConnection(options: UsePeerConnectionOptions): PeerConnectionApi {
   const {
     callId,
@@ -58,11 +84,17 @@ export function usePeerConnection(options: UsePeerConnectionOptions): PeerConnec
     peerId,
     localStream,
     enabled = true,
+    iceServers,
+    refreshIceServers,
     onHangup,
     createTransport,
   } = options;
 
   const [state, setState] = useState<PeerState>("new");
+  const [quality, setQuality] = useState<{ route: IceRoute; rtt: number | null }>({
+    route: "unknown",
+    rtt: null,
+  });
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [remoteMedia, setRemoteMedia] = useState<MediaState>(DEFAULT_MEDIA_STATE);
   const [error, setError] = useState<Error | null>(null);
@@ -74,6 +106,12 @@ export function usePeerConnection(options: UsePeerConnectionOptions): PeerConnec
   const hangupHandler = useRef(onHangup);
   useEffect(() => {
     hangupHandler.current = onHangup;
+  });
+
+  // In a ref so a re-render of the shell never rebuilds the connection.
+  const refreshHandler = useRef(refreshIceServers);
+  useEffect(() => {
+    refreshHandler.current = refreshIceServers;
   });
 
   /*
@@ -95,6 +133,11 @@ export function usePeerConnection(options: UsePeerConnectionOptions): PeerConnec
       selfId,
       peerId,
       transport,
+      configuration: buildIceConfiguration({ turnServers: iceServers ?? [] }),
+      refreshConfiguration: async () => {
+        const fresh = await refreshHandler.current?.();
+        return fresh ? buildIceConfiguration({ turnServers: fresh }) : null;
+      },
       onState: setState,
       onRemoteStream: setRemoteStream,
       onRemoteMediaState: setRemoteMedia,
@@ -112,7 +155,7 @@ export function usePeerConnection(options: UsePeerConnectionOptions): PeerConnec
       peer.close();
       void transport.close();
     };
-  }, [callId, selfId, peerId, enabled, createTransport]);
+  }, [callId, selfId, peerId, enabled, createTransport, iceServers]);
 
   /*
    * Publish local tracks.
@@ -137,6 +180,34 @@ export function usePeerConnection(options: UsePeerConnectionOptions): PeerConnec
       peer.addTrack(track, localStream);
     }
   }, [localStream, enabled]);
+
+  /*
+   * Poll the connection for its route and round-trip time.
+   *
+   * Only while connected, and slowly: `getStats()` walks the whole report, and
+   * nothing here changes second to second. The route is settled within a moment
+   * of connecting and then holds unless ICE re-nominates a different pair, which
+   * is exactly the event worth noticing.
+   */
+  useEffect(() => {
+    if (state !== "connected") return;
+
+    let cancelled = false;
+
+    const sample = async () => {
+      const stats = await peerRef.current?.getStats();
+      if (cancelled || !stats) return;
+      setQuality({ route: stats.route, rtt: stats.rtt });
+    };
+
+    void sample();
+    const timer = setInterval(() => void sample(), STATS_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [state]);
 
   /**
    * Screen shares, camera toggles and device switches all come through here.
@@ -163,6 +234,8 @@ export function usePeerConnection(options: UsePeerConnectionOptions): PeerConnec
 
   return {
     state,
+    route: quality.route,
+    rtt: quality.rtt,
     remoteStream,
     remoteMedia,
     error,

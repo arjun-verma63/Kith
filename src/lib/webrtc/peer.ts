@@ -67,8 +67,23 @@ export interface PeerOptions extends PeerEvents {
    * browser one. Defaults to the global in a browser.
    */
   createConnection?: (configuration: RTCConfiguration) => RTCPeerConnection;
+  /**
+   * Fetches a fresh configuration before an ICE restart.
+   *
+   * Relay credentials are short-lived by design, and a restart is exactly when
+   * an expired one bites: the connection has already failed, and the recovery
+   * attempt fails too, for a completely different reason nobody can see. Called
+   * only on the restart path — a healthy call never needs it, because an
+   * existing relay allocation keeps working after its credential expires.
+   *
+   * Returning null keeps whatever configuration the connection already has.
+   */
+  refreshConfiguration?: () => Promise<RTCConfiguration | null>;
   iceBatchMs?: number;
 }
+
+/** How a connected pair is actually routed. */
+export type IceRoute = "direct" | "relayed" | "unknown";
 
 export class KithPeer {
   readonly connection: RTCPeerConnection;
@@ -79,6 +94,7 @@ export class KithPeer {
   private readonly transport: SignalingTransport;
   private readonly events: PeerEvents;
   private readonly iceBatchMs: number;
+  private readonly refreshConfiguration: (() => Promise<RTCConfiguration | null>) | null;
   private readonly unsubscribe: () => void;
 
   /** Perfect-negotiation flags. See the class comment. */
@@ -118,6 +134,7 @@ export class KithPeer {
     this.transport = options.transport;
     this.events = options;
     this.iceBatchMs = options.iceBatchMs ?? ICE_BATCH_MS;
+    this.refreshConfiguration = options.refreshConfiguration ?? null;
     this.polite = isPolite(options.selfId, options.peerId);
 
     const configuration = options.configuration ?? buildIceConfiguration();
@@ -187,24 +204,50 @@ export class KithPeer {
     return this.state;
   }
 
-  /** Live connection quality, for the signal-strength indicator. */
-  async getStats(): Promise<{ rtt: number | null; packetsLost: number; jitter: number | null }> {
+  /**
+   * Live connection quality and, just as usefully, the route.
+   *
+   * `route` is the only way to find out whether TURN is doing anything. On an
+   * open network every call connects directly and a completely broken relay
+   * configuration looks perfect — right up until somebody on a corporate network
+   * cannot connect to anyone. Reading the selected candidate pair answers it
+   * from the connection itself rather than from what we hoped we configured.
+   */
+  async getStats(): Promise<{
+    rtt: number | null;
+    packetsLost: number;
+    jitter: number | null;
+    route: IceRoute;
+  }> {
     const report = await this.connection.getStats();
     let rtt: number | null = null;
     let packetsLost = 0;
     let jitter: number | null = null;
 
+    // Candidate ids from the winning pair, resolved against the candidate
+    // entries in a second pass — the pair names them but does not describe them.
+    let localId: string | null = null;
+    let remoteId: string | null = null;
+    const candidateTypes = new Map<string, string>();
+
     report.forEach((entry) => {
-      if (entry.type === "candidate-pair" && entry.state === "succeeded") {
+      if (entry.type === "candidate-pair" && (entry.state === "succeeded" || entry.nominated)) {
         rtt = typeof entry.currentRoundTripTime === "number" ? entry.currentRoundTripTime : rtt;
+        if (typeof entry.localCandidateId === "string") localId = entry.localCandidateId;
+        if (typeof entry.remoteCandidateId === "string") remoteId = entry.remoteCandidateId;
       }
       if (entry.type === "inbound-rtp") {
         packetsLost += typeof entry.packetsLost === "number" ? entry.packetsLost : 0;
         jitter = typeof entry.jitter === "number" ? entry.jitter : jitter;
       }
+      if (entry.type === "local-candidate" || entry.type === "remote-candidate") {
+        if (typeof entry.id === "string" && typeof entry.candidateType === "string") {
+          candidateTypes.set(entry.id, entry.candidateType);
+        }
+      }
     });
 
-    return { rtt, packetsLost, jitter };
+    return { rtt, packetsLost, jitter, route: routeOf(localId, remoteId, candidateTypes) };
   }
 
   /**
@@ -499,6 +542,36 @@ export class KithPeer {
     if (this.closed || this.polite) return;
     if (this.connection.connectionState === "connected") return;
 
+    // Fresh relay credentials first, when there is somewhere to get them. The
+    // restart is fired from the callback so a slow fetch delays recovery rather
+    // than racing it — and a failed fetch still restarts, on whatever
+    // configuration the connection already has.
+    if (this.refreshConfiguration) {
+      void this.refreshConfiguration()
+        .then((configuration) => {
+          if (this.closed) return;
+          if (configuration) {
+            try {
+              this.connection.setConfiguration(configuration);
+            } catch {
+              // Not every implementation allows this mid-connection. The restart
+              // is still worth attempting.
+            }
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (!this.closed) this.performRestart();
+        });
+      return;
+    }
+
+    this.performRestart();
+  }
+
+  private performRestart(): void {
+    if (this.closed || this.connection.connectionState === "connected") return;
+
     try {
       if (typeof this.connection.restartIce === "function") {
         try {
@@ -549,6 +622,27 @@ export class KithPeer {
       this.recoveryTimer = null;
     }
   }
+}
+
+/**
+ * Whether either end of the winning pair is a relay.
+ *
+ * Either, not both: media is relayed if it passes through a TURN server in
+ * either direction, and the common asymmetric case is one peer behind a
+ * restrictive NAT and the other on an open connection.
+ */
+function routeOf(
+  localId: string | null,
+  remoteId: string | null,
+  types: Map<string, string>,
+): IceRoute {
+  if (!localId && !remoteId) return "unknown";
+
+  const local = localId ? types.get(localId) : undefined;
+  const remote = remoteId ? types.get(remoteId) : undefined;
+
+  if (local === undefined && remote === undefined) return "unknown";
+  return local === "relay" || remote === "relay" ? "relayed" : "direct";
 }
 
 export { DEFAULT_MEDIA_STATE };

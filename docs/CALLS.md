@@ -365,9 +365,10 @@ ring is audible. Those need hands:
    if a connection does not come up.
 
 **Both browsers must reach each other's network.** On the same wifi that is
-automatic. Across the internet it will work for most home connections and fail
-behind symmetric or carrier-grade NAT, because there is no TURN relay yet —
-[WEBRTC.md §8](WEBRTC.md) covers what that will take.
+automatic. Across the internet, STUN alone covers most home connections and
+fails behind symmetric NAT, carrier-grade NAT, or a firewall that drops UDP.
+Configure a relay to cover those — [TURN.md](TURN.md) — and check the call panel
+for `· relayed` to confirm it is being used.
 
 ---
 
@@ -382,7 +383,7 @@ behind symmetric or carrier-grade NAT, because there is no TURN relay yet —
   every member and `end_call` keeps a call alive while two people remain — but
   the provider holds one peer connection, so it is 1:1 in practice. A mesh is one
   `KithPeer` per participant.
-- **TURN**, so calls behind restrictive NAT will not connect.
+- **TURN by default.** It is supported and documented ([TURN.md](TURN.md)) but not configured here, so calls behind restrictive NAT will not connect until somebody sets it up.
 - **A call inside the message thread.** `message_kind` already has a `call_event`
   member for this; the log is a separate page for now.
 - **Ring on other devices.** The ring goes to every session of yours that is

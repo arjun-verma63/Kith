@@ -60,6 +60,7 @@ served from our own origin.
 | `npm run calls:test`         | The call lifecycle and who may do what to it              |
 | `npm run call-session:test`  | Two sessions, one call, end to end                        |
 | `npm run screen-share:test`  | Capture, stopping, and the one-sender rule                |
+| `npm run turn:test`          | Relay credentials, transports, and the route              |
 | `npm run db:types`           | Regenerate `src/types/database.ts` from the migrations    |
 | `npm run db:types:check`     | Fail if the generated types have drifted (for CI)         |
 
@@ -166,7 +167,7 @@ Two guards worth knowing about:
 - `npm run build && npm run check:bundle` scans the built client bundle for the value of
   every server-only secret and fails if one appears. Run it in CI.
 
-**[docs/SUPABASE.md](docs/SUPABASE.md) is the credential map** — what each key can do,
+**[docs/SUPABASE.md](docs/SUPABASE.md) and [docs/TURN.md](docs/TURN.md) are the credential maps** — what each key can do,
 where it belongs per environment, and what to do if one leaks.
 
 Database work lives in `supabase/` — migrations only, never the dashboard. See

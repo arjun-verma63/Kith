@@ -170,3 +170,61 @@ export async function loadMoreCallsAction(before: string): Promise<CallHistoryEn
   if (!user) return [];
   return listCallHistory(before);
 }
+
+/**
+ * Relay credentials for one call.
+ *
+ * ── Why this is an action and not a constant ─────────────────────────────────
+ *
+ * TURN credentials cannot be inlined into the bundle: a relay password in
+ * client JavaScript is an open bandwidth proxy for anybody who opens devtools.
+ * They are minted per user, per call, with a short expiry, and delivered through
+ * this authenticated call.
+ *
+ * ── Why it checks the call ───────────────────────────────────────────────────
+ *
+ * Being signed in is not enough. `is_call_participant` is the same gate that
+ * guards the signalling channel, so a credential is issued only to somebody who
+ * is demonstrably on a call — which bounds abuse to people who could already
+ * relay media by simply making a call, and makes the relay's logs meaningful.
+ *
+ * ── Why it never fails ───────────────────────────────────────────────────────
+ *
+ * An empty list is a working answer: the call proceeds on STUN, exactly as it
+ * did before TURN existed. A relay outage or a typo in an environment variable
+ * must degrade a call, never prevent one.
+ */
+export async function getIceServersAction(callId: string): Promise<{
+  iceServers: RTCIceServer[];
+  expiresAt: string | null;
+  source: "hmac" | "static" | "none";
+}> {
+  const empty = { iceServers: [], expiresAt: null, source: "none" as const };
+
+  const user = await getCurrentUser();
+  if (!user) return empty;
+
+  const parsed = uuid.safeParse(callId);
+  if (!parsed.success) return empty;
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.rpc("is_call_participant", {
+      target_call: parsed.data,
+    });
+
+    if (error || data !== true) return empty;
+
+    const { getTurnCredential } = await import("@/lib/server/turn");
+    const credential = getTurnCredential(user.id);
+
+    return {
+      iceServers: credential.iceServers,
+      expiresAt: credential.expiresAt,
+      source: credential.source,
+    };
+  } catch (error) {
+    console.error("[turn] could not issue relay credentials; the call will use STUN", error);
+    return empty;
+  }
+}

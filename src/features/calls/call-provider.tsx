@@ -13,6 +13,7 @@ import {
 import {
   answerCallAction,
   endCallAction,
+  getIceServersAction,
   refreshActiveCallAction,
   setCallMediaStateAction,
   startCallAction,
@@ -25,7 +26,7 @@ import { startRinging, stopRinging } from "@/features/calls/ringtone";
 import { useLocalMedia } from "@/features/calls/use-local-media";
 import { usePeerConnection } from "@/features/calls/use-peer-connection";
 import { subscribeToUserEvents } from "@/lib/supabase/user-channel";
-import type { PeerState } from "@/lib/webrtc/peer";
+import type { IceRoute, PeerState } from "@/lib/webrtc/peer";
 import type { MediaState } from "@/lib/webrtc/signaling";
 
 /**
@@ -56,6 +57,8 @@ export interface CallContextValue {
   call: ActiveCall | null;
   phase: "idle" | "outgoing" | "incoming" | "active";
   connection: PeerState;
+  /** Whether the media is going through a relay. Diagnostic, and honest. */
+  route: IceRoute;
   micEnabled: boolean;
   screenSharing: boolean;
   screenShareSupported: boolean;
@@ -135,6 +138,19 @@ export function CallProvider({
     onVideoTrack: (track) => setVideoTrack.current(track),
   });
 
+  /*
+   * Relay credentials.
+   *
+   * Fetched while the phone is ringing rather than when the call connects. That
+   * window is dead time — somebody is deciding whether to pick up — and using it
+   * means the peer connection is created the instant the call goes live instead
+   * of waiting a round trip for credentials.
+   *
+   * Empty is the normal state: with no relay configured this stays `[]` and
+   * calls run on STUN exactly as they did before TURN existed.
+   */
+  const [iceServers, setIceServers] = useState<RTCIceServer[]>([]);
+
   const phase: CallContextValue["phase"] = !call
     ? "idle"
     : call.status === "active"
@@ -148,6 +164,16 @@ export function CallProvider({
     selfId: userId,
     peerId: call?.peer?.id ?? "",
     localStream: media.stream,
+    iceServers,
+    // A relay credential is short-lived, and a reconnection is exactly when an
+    // expired one bites: the call has already dropped, and the recovery fails
+    // too, for a reason nobody can see.
+    refreshIceServers: async () => {
+      const current = callRef.current;
+      if (!current) return null;
+      const fresh = await getIceServersAction(current.id);
+      return fresh.iceServers;
+    },
     // Nothing is created until there is a real call with a real other person.
     enabled: phase === "active" && Boolean(call?.peer),
     onHangup: () => {
@@ -162,6 +188,27 @@ export function CallProvider({
   useEffect(() => {
     setVideoTrack.current = peer.setVideoTrack;
   }, [peer.setVideoTrack]);
+
+  /*
+   * Fetch relay credentials as soon as there is a call to fetch them for.
+   *
+   * Keyed on the call id, so one fetch per call. The result is state rather than
+   * a ref because the peer connection has to be rebuilt if it arrives after the
+   * call went live — which only happens on a very fast answer.
+   */
+  useEffect(() => {
+    const id = call?.id;
+    if (!id) return;
+
+    let cancelled = false;
+    void getIceServersAction(id).then((result) => {
+      if (!cancelled) setIceServers(result.iceServers);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [call?.id]);
 
   // Kept in a ref so the socket handlers and the timeout do not have to be
   // rebuilt every time the call object changes identity.
@@ -221,6 +268,7 @@ export function CallProvider({
         stopRinging();
         media.stop();
         setCall(null);
+        setIceServers([]);
       },
     });
     // `media` is a stable set of callbacks over a ref; re-subscribing on every
@@ -443,6 +491,7 @@ export function CallProvider({
       call,
       phase,
       connection: peer.state,
+      route: peer.route,
       micEnabled: media.media.micEnabled,
       screenSharing: media.media.screenSharing,
       screenShareSupported: media.screenShareSupported,
@@ -464,6 +513,7 @@ export function CallProvider({
       call,
       phase,
       peer.state,
+      peer.route,
       peer.remoteMedia.micEnabled,
       peer.remoteMedia.screenSharing,
       peer.remoteStream,

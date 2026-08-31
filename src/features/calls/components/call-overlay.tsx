@@ -205,6 +205,7 @@ function ConnectedBar() {
   const {
     call,
     connection,
+    route,
     micEnabled,
     screenSharing,
     screenShareSupported,
@@ -290,6 +291,10 @@ function ConnectedBar() {
               {unsettled ? status : elapsed}
               {!remoteMicEnabled && !unsettled ? " · muted" : ""}
               {remoteScreenSharing && !unsettled ? " · sharing" : ""}
+              {/* Said out loud because it explains latency, and because it is
+                  the only way anybody finds out whether the relay is being used
+                  at all. Direct connections say nothing — that is normal. */}
+              {route === "relayed" && !unsettled ? " · relayed" : ""}
             </span>
           </div>
 
