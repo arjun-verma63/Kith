@@ -284,6 +284,32 @@ upload, then go straight to Storage rather than through a server action — the
 bucket policy already restricts the write to the uploader's own folder, so a
 server in the middle adds a round trip and no check.
 
+### Friends
+
+| Route      |                                                                   |
+| ---------- | ----------------------------------------------------------------- |
+| `/friends` | Friends, incoming requests, sent requests, and search — four tabs |
+
+Search, send, accept, decline, withdraw, remove. The page opens on Requests when
+somebody is waiting, because that is the tab that needs a decision.
+
+**Everything the brief asks to prevent is prevented by the database, not by this
+code.** Delete every check in `features/friends/actions.ts` and the guarantees
+still hold:
+
+|                               | Enforced by                                                                                                                                                       |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No self-requests              | `friend_requests_no_self` CHECK                                                                                                                                   |
+| No duplicate friendships      | primary key on the canonical `(low, high)` pair                                                                                                                   |
+| No duplicate pending requests | partial unique index on the **unordered** pair, so A→B blocks B→A too                                                                                             |
+| No unauthorized modification  | RLS. Accept and withdraw are _separate_ policies with different permitted target states — one policy allowing both would let a requester accept their own request |
+
+Search has three rules that are privacy decisions rather than features: a blank
+query returns nothing (an empty search that lists everyone is a member
+directory), `discoverable = false` hides you from strangers but not from
+existing friends, and a blocked person is absent from the result set entirely
+rather than shown as "no results".
+
 ## What is deliberately absent
 
 - **No 2FA yet.** It is the next phase, and the schema already has the AAL2
@@ -295,9 +321,9 @@ server in the middle adds a round trip and no check.
 
 ## What is next
 
-Friends: the request lifecycle, the friends board, blocking and reporting — and
-with them the nav rail, which is waiting on destinations and on your people.
-Then two-factor authentication. See
+Messaging: conversations, the realtime provider, and the nav rail — which now has
+your people to put at the bottom of it. Blocking and reporting surfaces, then
+two-factor authentication. See
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full phase plan.
 
 ## Licence

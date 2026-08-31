@@ -800,6 +800,40 @@ export type Database = {
         };
         Returns: boolean;
       };
+      list_friend_requests: {
+        Args: {
+          p_direction: string;
+        };
+        Returns: {
+            request_id: string | null;
+            created_at: string | null;
+            message: string | null;
+            id: string | null;
+            username: string | null;
+            display_name: string | null;
+            avatar_path: string | null;
+            pronouns: string | null;
+            accent: Database["public"]["Enums"]["profile_accent"] | null;
+            status: Database["public"]["Enums"]["presence_status"] | null;
+            last_seen_at: string | null;
+        }[];
+      };
+      list_friends: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+            id: string | null;
+            username: string | null;
+            display_name: string | null;
+            avatar_path: string | null;
+            bio: string | null;
+            pronouns: string | null;
+            accent: Database["public"]["Enums"]["profile_accent"] | null;
+            status: Database["public"]["Enums"]["presence_status"] | null;
+            status_text: string | null;
+            last_seen_at: string | null;
+            friends_since: string | null;
+        }[];
+      };
       record_invite_redemption: {
         Args: {
           p_invite_id: string;
@@ -812,6 +846,24 @@ export type Database = {
           p_invite_id: string;
         };
         Returns: undefined;
+      };
+      search_profiles: {
+        Args: {
+          p_query: string;
+        };
+        Returns: {
+            id: string | null;
+            username: string | null;
+            display_name: string | null;
+            avatar_path: string | null;
+            bio: string | null;
+            pronouns: string | null;
+            accent: Database["public"]["Enums"]["profile_accent"] | null;
+            status: Database["public"]["Enums"]["presence_status"] | null;
+            status_text: string | null;
+            last_seen_at: string | null;
+            relationship: string | null;
+        }[];
       };
       start_dm: {
         Args: {

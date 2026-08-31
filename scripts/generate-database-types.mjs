@@ -112,7 +112,10 @@ const { rows: functionRows } = await db.query(`
          rt.typname                            as return_type,
          p.proretset                           as returns_set,
          coalesce(p.proargnames, '{}')         as arg_names,
-         p.proargtypes                         as arg_type_oids
+         p.proargtypes                         as arg_type_oids,
+         -- OUT/TABLE columns, for functions declared RETURNS TABLE(...).
+         coalesce(p.proallargtypes, '{}')      as all_arg_type_oids,
+         coalesce(p.proargmodes, '{}')         as arg_modes
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     join pg_type rt on rt.oid = p.prorettype
@@ -167,6 +170,38 @@ function emitTable(name, spec) {
   ].join("\n");
 }
 
+/**
+ * The row type of a `RETURNS TABLE(...)` function.
+ *
+ * Postgres records those columns as OUT parameters: their names sit in
+ * `proargnames` alongside the IN parameters, their types in `proallargtypes`,
+ * distinguished by `proargmodes` ('t' for TABLE, 'o' for OUT). Without reading
+ * them, such a function types as an opaque record and every field access on a
+ * result set goes unchecked — which defeats the point of generating types.
+ *
+ * Columns are emitted nullable because Postgres makes no not-null guarantee
+ * about a function's output, however the body is written.
+ *
+ * Returns null when there are no OUT columns, so scalar returns fall through.
+ */
+function tableReturnShape(fn) {
+  const modes = fn.arg_modes ?? [];
+  if (modes.length === 0) return null;
+
+  const allTypes = fn.all_arg_type_oids ?? [];
+  const names = fn.arg_names ?? [];
+
+  const columns = [];
+  for (let i = 0; i < modes.length; i += 1) {
+    if (modes[i] !== "t" && modes[i] !== "o") continue;
+    const pgType = typeByOid.get(String(allTypes[i])) ?? "text";
+    const name = names[i] ?? `column${i}`;
+    columns.push(`${indent(12)}${name}: ${tsType(pgType, enumNames)} | null;`);
+  }
+
+  return columns.length > 0 ? columns : null;
+}
+
 function emitFunction(fn) {
   const oids = String(fn.arg_type_oids ?? "")
     .trim()
@@ -180,8 +215,15 @@ function emitFunction(fn) {
     return `${indent(10)}${argName}: ${tsType(pgType, enumNames)};`;
   });
 
-  const returns = tsType(fn.return_type, enumNames);
-  const returnType = fn.returns_set ? `${returns}[]` : returns;
+  const tableColumns = tableReturnShape(fn);
+
+  let returnType;
+  if (tableColumns) {
+    returnType = `{\n${tableColumns.join("\n")}\n${indent(8)}}[]`;
+  } else {
+    const returns = tsType(fn.return_type, enumNames);
+    returnType = fn.returns_set ? `${returns}[]` : returns;
+  }
 
   return [
     `${indent(6)}${fn.name}: {`,

@@ -28,7 +28,8 @@
     "db:test": "node supabase/tests/rls.test.mjs",
     "auth:test": "node supabase/tests/auth.test.mjs",
     "profile:test": "node supabase/tests/profile.test.mjs",
-    "test": "npm run db:test && npm run auth:test && npm run profile:test"
+    "friends:test": "node supabase/tests/friends.test.mjs",
+    "test": "npm run db:test && npm run auth:test && npm run profile:test && npm run friends:test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
