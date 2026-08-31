@@ -883,11 +883,37 @@ export type Database = {
             reactions: Json | null;
         }[];
       };
+      list_notifications: {
+        Args: {
+          p_limit?: number | null;
+        };
+        Returns: {
+            id: string | null;
+            kind: Database["public"]["Enums"]["notification_kind"] | null;
+            payload: Json | null;
+            read_at: string | null;
+            created_at: string | null;
+            actor_id: string | null;
+            actor_username: string | null;
+            actor_display_name: string | null;
+            actor_avatar_path: string | null;
+        }[];
+      };
       mark_conversation_read: {
         Args: {
           p_conversation_id: string;
         };
         Returns: undefined;
+      };
+      mark_notifications_read: {
+        Args: {
+          p_ids?: string[] | null;
+        };
+        Returns: number;
+      };
+      prune_notifications: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
       };
       record_invite_redemption: {
         Args: {

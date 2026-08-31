@@ -31,7 +31,8 @@
     "friends:test": "node supabase/tests/friends.test.mjs",
     "presence:test": "node supabase/tests/presence.test.mjs",
     "messages:test": "node supabase/tests/messages.test.mjs",
-    "test": "npm run db:test && npm run auth:test && npm run profile:test && npm run friends:test && npm run presence:test && npm run messages:test"
+    "notifications:test": "node supabase/tests/notifications.test.mjs",
+    "test": "npm run db:test && npm run auth:test && npm run profile:test && npm run friends:test && npm run presence:test && npm run messages:test && npm run notifications:test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

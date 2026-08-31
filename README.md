@@ -371,6 +371,39 @@ raw input reaches an attribute, and only `http` and `https` produce one — a
 characters and bidirectional overrides ("Trojan Source"), which have no
 legitimate use in a chat message and several illegitimate ones.
 
+### Notifications
+
+A bell in the app header with a live badge and a dropdown panel. Six kinds:
+friend requests, accepted requests, new messages, missed calls, game
+invitations and couple proposals.
+
+**No client can create a notification.** `notifications` has no INSERT policy at
+all — every row arrives from a `SECURITY DEFINER` trigger, so the actor is
+whoever the database saw rather than whoever the request claimed to be. Without
+that rule, any account could write into any other account's feed: a spam and
+phishing channel delivered by the product itself.
+
+Three efficiency decisions that are really correctness decisions:
+
+- **Message notifications collapse per conversation.** A new one is raised only
+  when there is no _unread_ one for that conversation already, so a forty-message
+  evening produces one row and the badge counts conversations that want you —
+  a number a person can act on.
+- **Reading a conversation marks its notification read**, in the same
+  transaction. A badge that outlives the reason for it is a badge nobody looks
+  at twice.
+- **Muted conversations raise nothing**, and you are never notified of your own
+  actions.
+
+Delivery is a broadcast onto `user:{id}`, the personal bus — read-only from a
+browser, so notifications are delivered _to_ you there and nobody can broadcast
+into somebody else's. Read notifications older than 30 days are pruned by a
+scheduled job; unread ones never are, however old.
+
+Browser push is deliberately not built. It needs a service worker and VAPID
+keys, and on iOS an installed PWA — a separate piece of work rather than a
+finishing touch on this one.
+
 ## What is deliberately absent
 
 - **No 2FA yet.** It is the next phase, and the schema already has the AAL2

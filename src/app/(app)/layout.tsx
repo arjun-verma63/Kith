@@ -7,6 +7,8 @@ import { KithMark } from "@/components/ui/icon";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { signOutAction } from "@/features/auth/actions";
 import { PresenceProvider } from "@/components/presence/provider";
+import { NotificationBell } from "@/features/notifications/components/notification-bell";
+import { countUnreadNotifications, listNotifications } from "@/features/notifications/queries";
 import { RoomCount } from "@/components/presence/room-count";
 import { PresenceHeartbeat } from "@/features/profile/components/presence-heartbeat";
 import { listFriends } from "@/features/friends/queries";
@@ -33,7 +35,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   // Who to count in the room indicator. Friends only — presence is not a
   // directory of everyone who happens to hold an account.
-  const friends = await listFriends();
+  // Fetched in parallel: three reads with nothing to say to each other should
+  // not cost three sequential round trips on every page in the app.
+  const [friends, notifications, unread] = await Promise.all([
+    listFriends(),
+    listNotifications(),
+    countUnreadNotifications(),
+  ]);
 
   return (
     <PresenceProvider userId={profile.id} status={profile.status as DeclaredStatus}>
@@ -60,6 +68,12 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
               </Link>
 
               <RoomCount friendIds={friends.map((friend) => friend.id)} />
+
+              <NotificationBell
+                userId={profile.id}
+                initialNotifications={notifications}
+                initialUnread={unread}
+              />
 
               <ThemeToggle className="hidden sm:inline-flex" />
 

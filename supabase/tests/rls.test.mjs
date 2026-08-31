@@ -628,9 +628,17 @@ await expectDenied(
 /* ========================================================================== */
 section("notifications & audit");
 
+// Counted by kind, not in total: message notifications now fire too
+// (migration 0015), and a bare count would make this assertion drift every time
+// another kind is added.
 await expectRows(
-  "Rafa has the friend-request notifications addressed to him",
-  asUser(db, rafa, "select id from public.notifications where user_id = $1", [rafa]),
+  "Rafa has the friend-request notification addressed to him",
+  asUser(
+    db,
+    rafa,
+    "select id from public.notifications where user_id = $1 and kind = 'friend_request'",
+    [rafa],
+  ),
   1,
 );
 
