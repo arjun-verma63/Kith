@@ -91,6 +91,30 @@ const SUPABASE_STUBS = /* sql */ `
 
   alter table realtime.messages enable row level security;
 
+  -- realtime.send is Supabase's broadcast primitive. Stubbed as a recording
+  -- table rather than a no-op so the messaging triggers can be asserted on:
+  -- a test can check that sending a message broadcast exactly one payload, to
+  -- the right topic, with the body omitted after a delete.
+  create table realtime.sent (
+    id bigserial primary key,
+    payload jsonb,
+    event text,
+    topic text,
+    private boolean,
+    at timestamptz not null default now()
+  );
+
+  create or replace function realtime.send(
+    payload jsonb,
+    event text,
+    topic text,
+    private boolean default true
+  ) returns void
+  language sql as $fn$
+    insert into realtime.sent (payload, event, topic, private)
+    values (payload, event, topic, private);
+  $fn$;
+
   -- Storage. Approximated closely enough that migration 0012's bucket insert and
   -- object policies are executed for real, including storage.foldername(), whose
   -- return shape (a text[] of path segments) is what every avatar policy indexes

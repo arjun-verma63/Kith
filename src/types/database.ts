@@ -734,6 +734,12 @@ export type Database = {
         };
         Returns: boolean;
       };
+      can_open_conversation_with: {
+        Args: {
+          other_user: string;
+        };
+        Returns: boolean;
+      };
       can_post_to_conversation: {
         Args: {
           target_conversation: string;
@@ -800,6 +806,26 @@ export type Database = {
         };
         Returns: boolean;
       };
+      list_conversations: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+            conversation_id: string | null;
+            kind: Database["public"]["Enums"]["conversation_kind"] | null;
+            title: string | null;
+            last_message_at: string | null;
+            last_message_body: string | null;
+            last_message_sender_id: string | null;
+            last_message_kind: Database["public"]["Enums"]["message_kind"] | null;
+            unread_count: number | null;
+            member_count: number | null;
+            other_user_id: string | null;
+            other_username: string | null;
+            other_display_name: string | null;
+            other_avatar_path: string | null;
+            other_status: Database["public"]["Enums"]["presence_status"] | null;
+            other_last_seen_at: string | null;
+        }[];
+      };
       list_friend_requests: {
         Args: {
           p_direction: string;
@@ -833,6 +859,35 @@ export type Database = {
             last_seen_at: string | null;
             friends_since: string | null;
         }[];
+      };
+      list_messages: {
+        Args: {
+          p_conversation_id: string;
+          p_before_created_at?: string | null;
+          p_before_id?: string | null;
+          p_limit?: number | null;
+        };
+        Returns: {
+            id: string | null;
+            conversation_id: string | null;
+            sender_id: string | null;
+            kind: Database["public"]["Enums"]["message_kind"] | null;
+            body: string | null;
+            reply_to_id: string | null;
+            created_at: string | null;
+            edited_at: string | null;
+            deleted_at: string | null;
+            sender_username: string | null;
+            sender_display_name: string | null;
+            sender_avatar_path: string | null;
+            reactions: Json | null;
+        }[];
+      };
+      mark_conversation_read: {
+        Args: {
+          p_conversation_id: string;
+        };
+        Returns: undefined;
       };
       record_invite_redemption: {
         Args: {
@@ -870,6 +925,20 @@ export type Database = {
           other_user: string;
         };
         Returns: string;
+      };
+      start_group: {
+        Args: {
+          p_title: string;
+          p_member_ids: string[];
+        };
+        Returns: string;
+      };
+      toggle_reaction: {
+        Args: {
+          p_message_id: string;
+          p_emoji: string;
+        };
+        Returns: boolean;
       };
       topic_uuid: {
         Args: {

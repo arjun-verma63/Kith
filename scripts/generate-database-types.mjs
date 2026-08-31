@@ -115,7 +115,11 @@ const { rows: functionRows } = await db.query(`
          p.proargtypes                         as arg_type_oids,
          -- OUT/TABLE columns, for functions declared RETURNS TABLE(...).
          coalesce(p.proallargtypes, '{}')      as all_arg_type_oids,
-         coalesce(p.proargmodes, '{}')         as arg_modes
+         coalesce(p.proargmodes, '{}')         as arg_modes,
+         -- Count of INPUT arguments that have defaults. Postgres requires them
+         -- to be the trailing ones, so this identifies exactly which are
+         -- optional at the call site.
+         p.pronargdefaults                     as default_count
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     join pg_type rt on rt.oid = p.prorettype
@@ -209,10 +213,19 @@ function emitFunction(fn) {
     .filter(Boolean);
   const names = fn.arg_names ?? [];
 
+  // Arguments with SQL defaults are optional at the call site, and every default
+  // in this schema is `null` — so they are nullable too. Without this, calling
+  // `list_messages(id)` to get the newest page is a type error against a
+  // function that explicitly supports it.
+  const defaultCount = Number(fn.default_count ?? 0);
+  const firstOptional = oids.length - defaultCount;
+
   const argLines = oids.map((oid, i) => {
     const argName = names[i] ?? `arg${i}`;
     const pgType = typeByOid.get(oid) ?? "text";
-    return `${indent(10)}${argName}: ${tsType(pgType, enumNames)};`;
+    const ts = tsType(pgType, enumNames);
+    const optional = i >= firstOptional;
+    return `${indent(10)}${argName}${optional ? "?" : ""}: ${ts}${optional ? " | null" : ""};`;
   });
 
   const tableColumns = tableReturnShape(fn);

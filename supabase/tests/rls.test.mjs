@@ -59,7 +59,7 @@ async function expectDenied(name, promise) {
   } catch (error) {
     if (/row-level security|violates row-level/i.test(error.message)) {
       ok(`${name} — denied (RLS policy)`);
-    } else if (/permission denied|append-only|not permitted/i.test(error.message)) {
+    } else if (/permission denied|append-only|not[ _]permitted/i.test(error.message)) {
       ok(`${name} — denied (${error.message.split("\n")[0].slice(0, 60)})`);
     } else {
       bad(name, `denied for the WRONG reason: ${error.message}`);
@@ -314,6 +314,19 @@ await expectDenied(
     [conversationId, nour],
   ),
 );
+
+// who_can_message defaults to 'friends' (migration 0014), so opening a DM now
+// requires a friendship. Befriend them first — which is the product rule, not a
+// test workaround.
+const { rows: nt } = await asUser(
+  db,
+  nour,
+  "insert into public.friend_requests (requester_id, addressee_id) values ($1,$2) returning id",
+  [nour, theo],
+);
+await asUser(db, theo, "update public.friend_requests set status='accepted' where id=$1", [
+  nt[0].id,
+]);
 
 await expectAllowed(
   "start_dm() opens a DM and lets both parties in (positive control)",

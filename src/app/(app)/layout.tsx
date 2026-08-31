@@ -52,6 +52,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             </Link>
 
             <div className="flex items-center gap-3">
+              <Link
+                href="/messages"
+                className="control-focus link-grow rounded-edge text-sm text-fg-dim"
+              >
+                Messages
+              </Link>
+
               <RoomCount friendIds={friends.map((friend) => friend.id)} />
 
               <ThemeToggle className="hidden sm:inline-flex" />

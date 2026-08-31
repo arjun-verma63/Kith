@@ -338,6 +338,39 @@ Idle is a hidden tab (immediately) or five minutes without a pointer or key.
 The `last_seen_at` heartbeat still runs alongside: the channel answers "who is
 here now", the heartbeat answers "when were they last here" after they leave.
 
+### Messaging
+
+| Route            |                                                        |
+| ---------------- | ------------------------------------------------------ |
+| `/messages`      | Conversation list. On a phone this IS the page         |
+| `/messages/[id]` | The thread. Two panes on a wide screen, one on a phone |
+
+One-to-one and group conversations, realtime delivery, typing indicators, read
+state, reactions, sender-only deletion, and infinite scroll upward.
+
+**Pagination is keyset, not offset.** `offset 40 limit 20` makes the database
+walk and discard 40 rows per page, and — worse in a feed that grows from the end
+you are reading — a message arriving mid-scroll shifts every later page by one,
+so you see a duplicate or a gap. The cursor is a specific message, which is
+stable under concurrent writes and is one index seek however deep you scroll.
+
+**Realtime is broadcast from a database trigger**, not Postgres Changes. A
+trigger is one fan-out rather than an RLS re-evaluation per subscriber per row,
+and it lets the payload be shaped — so deleting a message broadcasts the deletion
+_without_ re-broadcasting the text it just removed. Authorization happens at
+subscribe time, through the `conv:{id}` policy on `realtime.messages`.
+
+**Typing indicators are never stored.** Client-to-client broadcast, throttled on
+send and expired on receive — a sender who closes the tab mid-word never sends a
+"stopped", so an indicator that waits for one stays on screen forever.
+
+On sanitisation: message bodies are rendered as React children, never as HTML.
+There is no `dangerouslySetInnerHTML` in this codebase. Links are the one place
+raw input reaches an attribute, and only `http` and `https` produce one — a
+`javascript:` URL stays plain text. Stored messages are stripped of control
+characters and bidirectional overrides ("Trojan Source"), which have no
+legitimate use in a chat message and several illegitimate ones.
+
 ## What is deliberately absent
 
 - **No 2FA yet.** It is the next phase, and the schema already has the AAL2
@@ -349,9 +382,9 @@ here now", the heartbeat answers "when were they last here" after they leave.
 
 ## What is next
 
-Messaging: conversations, the realtime provider, and the nav rail — which now has
-your people to put at the bottom of it. Blocking and reporting surfaces, then
-two-factor authentication. See
+Voice and video calls: WebRTC, TURN, and the call UI. Then the nav rail — which
+now has destinations and your people to put in it — followed by blocking and
+reporting surfaces and two-factor authentication. See
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full phase plan.
 
 ## Licence
