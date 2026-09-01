@@ -62,6 +62,7 @@ served from our own origin.
 | `npm run screen-share:test`  | Capture, stopping, and the one-sender rule                |
 | `npm run turn:test`          | Relay credentials, transports, and the route              |
 | `npm run games:test`         | The lobby, turn enforcement, and who may write state      |
+| `npm run wyr:test`           | Would You Rather: secrecy, scoring, people leaving        |
 | `npm run db:types`           | Regenerate `src/types/database.ts` from the migrations    |
 | `npm run db:types:check`     | Fail if the generated types have drifted (for CI)         |
 

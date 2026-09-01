@@ -866,7 +866,6 @@ export type Database = {
             conversation_id: string | null;
             host_id: string | null;
             status: Database["public"]["Enums"]["game_status"] | null;
-            state: Json | null;
             state_version: number | null;
             turn_seat: number | null;
             seed: number | null;

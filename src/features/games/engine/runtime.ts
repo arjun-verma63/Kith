@@ -338,3 +338,48 @@ export async function resyncSession(sessionId: string): Promise<void> {
     privateViews,
   );
 }
+
+/**
+ * The two views, for a server render.
+ *
+ * `get_game_session` deliberately does not return the raw state (migration
+ * 0018): SQL cannot run an engine, so it cannot redact anything, and returning
+ * the blob to any seated player meant a game with hidden information had none.
+ *
+ * This is the same split the socket sends, computed on the same code path, for
+ * the first paint. A spectator gets the public view and no private one — which
+ * is exactly what they would receive over the channel.
+ */
+export async function viewsForRender(
+  sessionId: string,
+  userId: string,
+): Promise<{
+  publicState: unknown;
+  privateState: unknown;
+  version: number;
+  turnSeat: number | null;
+  scores: Record<number, number>;
+} | null> {
+  const session = await loadSession(sessionId);
+  if (!session) return null;
+
+  const engine = getEngine(session.gameKey);
+  // No engine registered means no rules and nothing to render. The session is
+  // still real — the lobby works — so this is null rather than an error.
+  if (!engine) return null;
+
+  // A lobby has no state yet; `createInitialState` has not run.
+  if (session.status === "lobby") {
+    return { publicState: null, privateState: null, version: 0, turnSeat: null, scores: {} };
+  }
+
+  const seat = session.players.find((player) => player.userId === userId)?.seat ?? null;
+
+  return {
+    publicState: engine.publicView(session.state),
+    privateState: seat === null ? null : engine.viewFor(session.state, seat),
+    version: session.stateVersion,
+    turnSeat: session.turnSeat,
+    scores: engine.scores(session.state),
+  };
+}

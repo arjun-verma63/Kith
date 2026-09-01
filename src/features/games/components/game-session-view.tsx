@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -15,9 +15,15 @@ import {
   rematchAction,
   setReadyAction,
   startGameAction,
+  submitMoveAction,
 } from "@/features/games/actions";
+import { GameBoard, hasBoard } from "@/features/games/components/boards/registry";
 import type { GameSession, GamePlayer } from "@/features/games/queries";
-import { useGameSession, type GameView } from "@/features/games/use-game-session";
+import {
+  useGameSession,
+  type GameView,
+  type InitialViews,
+} from "@/features/games/use-game-session";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -33,8 +39,16 @@ import { cn } from "@/lib/utils/cn";
  * game-specific thing is what renders on the board, and that arrives from the
  * engine registry.
  */
-export function GameSessionView({ initial, userId }: { initial: GameSession; userId: string }) {
-  const { session, view, connected } = useGameSession(initial.id, userId, initial);
+export function GameSessionView({
+  initial,
+  initialViews,
+  userId,
+}: {
+  initial: GameSession;
+  initialViews: InitialViews | null;
+  userId: string;
+}) {
+  const { session, view, connected } = useGameSession(initial.id, userId, initial, initialViews);
 
   const seated = session.players.filter((player) => !player.hasLeft);
   const isPlayer = session.mySeat !== null;
@@ -263,16 +277,65 @@ function Lobby({
 /**
  * Where a game draws itself.
  *
- * Empty, deliberately. The architecture landed before any individual game, so
- * there is nothing to mount here yet — and saying so plainly is better than a
- * board that looks broken.
+ * Looked up by `session.gameKey`. A game with no board — the four catalogue
+ * entries that are still just a name — gets the panel below, which says so
+ * plainly rather than rendering something that looks broken.
  *
- * When a game arrives, its component is looked up by `session.gameKey` and
- * rendered with `view.publicState`, `view.privateState` and a `submitMove`
- * callback. Nothing else on this screen changes.
+ * Everything a board receives is already redacted: `publicState` is the engine's
+ * public view and `privateState` is this player's own. A board cannot see
+ * anybody else's secrets because it was never sent them.
  */
 function Board({ session, view }: { session: GameSession; view: GameView }) {
-  const hasState = view.publicState !== null && view.publicState !== undefined;
+  const [busy, setBusy] = useState(false);
+
+  /**
+   * Submits a move and reports what happened.
+   *
+   * Returns the reason rather than throwing, because most refusals here are
+   * ordinary events a board should handle quietly — "somebody else got there
+   * first" during a simultaneous round is not an error worth a banner.
+   */
+  const submit = useCallback(
+    async (move: unknown) => {
+      setBusy(true);
+      try {
+        const result = await submitMoveAction(session.id, move);
+        return result.ok ? null : result.reason;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [session.id],
+  );
+
+  const players = useMemo(
+    () =>
+      session.players
+        .filter((player) => !player.hasLeft)
+        .map((player) => ({
+          seat: player.seat,
+          displayName: player.displayName,
+          avatarUrl: player.avatarUrl,
+          userId: player.userId,
+        })),
+    [session.players],
+  );
+
+  if (hasBoard(session.gameKey)) {
+    return (
+      <Panel tone="flat" padding="lg" className="rounded-soft">
+        <GameBoard
+          gameKey={session.gameKey}
+          publicState={view.publicState}
+          privateState={view.privateState}
+          mySeat={session.mySeat}
+          players={players}
+          submit={submit}
+          busy={busy}
+        />
+      </Panel>
+    );
+  }
 
   return (
     <Panel tone="sunken" padding="lg" className="rounded-soft">
@@ -285,17 +348,6 @@ function Board({ session, view }: { session: GameSession; view: GameView }) {
             build.
           </p>
         </div>
-
-        {hasState ? (
-          <details className="w-full max-w-md text-left">
-            <summary className="control-focus cursor-pointer rounded-edge text-2xs text-fg-faint">
-              Current state (version {view.version})
-            </summary>
-            <pre className="numeric bg-room mt-2 max-h-48 overflow-auto rounded-inset p-3 text-[0.625rem] text-fg-dim">
-              {JSON.stringify(view.publicState, null, 2)}
-            </pre>
-          </details>
-        ) : null}
       </div>
     </Panel>
   );

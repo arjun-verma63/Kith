@@ -614,11 +614,19 @@ await expectDenied(
   ),
 );
 
-await expectRows(
-  "the catalogue is readable by everyone",
-  asUser(db, nour, "select key from public.games"),
-  5,
-);
+{
+  // Compared against what the service role sees rather than a hardcoded count:
+  // the invariant is "a member sees the whole catalogue", and a literal number
+  // just breaks every time a game is added.
+  const { rows: all } = await asService(db, "select key from public.games");
+  await expectRows(
+    "the catalogue is readable by everyone",
+    asUser(db, nour, "select key from public.games"),
+    all.length,
+  );
+  if (all.length > 0) ok("and there is a catalogue to read");
+  else bad("and there is a catalogue to read", "the games table is empty");
+}
 
 await expectDenied(
   "but nobody can enable a game from the client",

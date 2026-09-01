@@ -199,10 +199,18 @@ section("The catalogue");
   const { rows } = await asUser(db, ada, "select * from public.list_games()");
   truthy("every member can read the shelf", rows.length > 0);
 
-  const shipped = rows.filter((g) => g.key !== "reference");
+  // A game is enabled only once it has an engine. Would You Rather has one
+  // (migration 0018); the five placeholders from migration 0007 do not, and are
+  // still on the shelf marked "Soon" rather than hidden.
+  const placeholders = rows.filter((g) => g.key !== "reference" && g.key !== "would-you-rather");
   eq(
-    "every shipped game is disabled — the architecture landed before any game",
-    shipped.every((g) => g.enabled === false),
+    "a game without an engine stays disabled",
+    placeholders.every((g) => g.enabled === false),
+    true,
+  );
+  eq(
+    "and the one with an engine is enabled",
+    rows.find((g) => g.key === "would-you-rather")?.enabled,
     true,
   );
 
@@ -574,20 +582,34 @@ section("What each person can see");
   );
   truthy("but a room member can watch", watcher.length === 1);
 
-  const { rows: watching } = await asUser(
-    db,
-    nour,
-    "select state, my_seat from public.get_game_session($1)",
-    [lobby],
-  );
-  eq("a spectator sees the game exists", watching.length, 1);
-  eq("with no seat", watching[0].my_seat, null);
-  eq("and no state", watching[0].state, {});
-
-  const { rows: playing } = await asUser(db, ada, "select state from public.get_game_session($1)", [
+  const { rows: watching } = await asUser(db, nour, "select * from public.get_game_session($1)", [
     lobby,
   ]);
-  truthy("while a player gets the state", Object.keys(playing[0].state).length > 0);
+  eq("a spectator sees the game exists", watching.length, 1);
+  eq("with no seat", watching[0].my_seat, null);
+
+  /*
+   * And nobody gets the state over HTTP — not a spectator, not a player.
+   *
+   * This used to return the raw blob to anybody seated, which was fine for a
+   * game with no secrets and wrong for the first one that had them. SQL cannot
+   * run an engine, so it cannot redact; the fix (migration 0018) was to stop
+   * carrying state on this path at all and let the engine compute both views
+   * server-side. See would-you-rather.test.mjs for the version of this that
+   * matters.
+   */
+  eq("and the session RPC carries no state for anybody", "state" in watching[0], false);
+
+  const { rows: playing } = await asUser(db, ada, "select * from public.get_game_session($1)", [
+    lobby,
+  ]);
+  eq("a player's read is the same shape", "state" in playing[0], false);
+  eq("with a seat on it", playing[0].my_seat, 0);
+
+  await denied(
+    "and the column is not grantable to a client either",
+    asUser(db, ada, "select state from public.game_sessions where id = $1", [lobby]),
+  );
 }
 
 /* ==========================================================================

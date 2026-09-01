@@ -72,23 +72,44 @@ const EMPTY_VIEW: GameView = {
   outcome: null,
 };
 
-export function useGameSession(sessionId: string, userId: string, initial: GameSession) {
+/**
+ * The first paint, computed server-side by the engine.
+ *
+ * Not read from the session row: SQL cannot redact per player, so the raw state
+ * is not on the HTTP path at all (migration 0018). This is the same split the
+ * socket sends, arriving early enough that a refresh mid-game shows the board
+ * before any channel connects.
+ */
+export interface InitialViews {
+  publicState: unknown;
+  privateState: unknown;
+  version: number;
+  turnSeat: number | null;
+  scores: Record<number, number>;
+}
+
+export function useGameSession(
+  sessionId: string,
+  userId: string,
+  initial: GameSession,
+  initialViews: InitialViews | null,
+) {
   const [session, setSession] = useState<GameSession>(initial);
   const [view, setView] = useState<GameView>(() => ({
     ...EMPTY_VIEW,
-    version: initial.stateVersion,
+    version: initialViews?.version ?? initial.stateVersion,
     status: initial.status,
-    turnSeat: initial.turnSeat,
-    // Server-rendered, so a refresh mid-game shows the board before any socket
-    // connects. Empty for a spectator — the database withholds it.
-    publicState: initial.state ?? null,
+    turnSeat: initialViews?.turnSeat ?? initial.turnSeat,
+    publicState: initialViews?.publicState ?? null,
+    privateState: initialViews?.privateState ?? null,
+    scores: initialViews?.scores ?? {},
   }));
   const [connected, setConnected] = useState(false);
 
   // The last version applied, so a late broadcast cannot overwrite a newer one.
   // Broadcast delivery is not ordered end to end, and a stale board is worse
   // than a slightly delayed one.
-  const appliedVersion = useRef(initial.stateVersion);
+  const appliedVersion = useRef(initialViews?.version ?? initial.stateVersion);
 
   const reload = useCallback(async () => {
     const fresh = await refreshGameAction(sessionId);

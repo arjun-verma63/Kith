@@ -5,10 +5,6 @@
  * once, by the server-side move resolver, so a game's rules are loaded exactly
  * where they are allowed to run and nowhere else.
  *
- * There is nothing here yet — the architecture landed before any individual
- * game, which is the order that keeps the lobby from being shaped around
- * whichever game happened to be written first.
- *
  * Adding a game:
  *
  *   1. Write `src/features/games/engine/games/<key>.ts` implementing GameEngine.
@@ -19,7 +15,7 @@
  * scoring, the winner screen and rematch already work for it.
  */
 
-// import "@/features/games/engine/games/word-rush";
+import "@/features/games/engine/games/would-you-rather";
 
 export { getEngine, registerEngine, registeredKeys } from "@/features/games/engine/registry";
 export type * from "@/features/games/engine/types";

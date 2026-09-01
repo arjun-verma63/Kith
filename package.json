@@ -37,8 +37,9 @@
     "screen-share:test": "node supabase/tests/screen-share.test.mjs",
     "turn:test": "node supabase/tests/turn.test.mjs",
     "games:test": "node supabase/tests/games.test.mjs",
+    "wyr:test": "node supabase/tests/would-you-rather.test.mjs",
     "webrtc:test": "node supabase/tests/webrtc.test.mjs",
-    "test": "npm run db:test && npm run auth:test && npm run profile:test && npm run friends:test && npm run presence:test && npm run messages:test && npm run notifications:test && npm run webrtc:test && npm run calls:test && npm run call-session:test && npm run screen-share:test && npm run turn:test && npm run games:test"
+    "test": "npm run db:test && npm run auth:test && npm run profile:test && npm run friends:test && npm run presence:test && npm run messages:test && npm run notifications:test && npm run webrtc:test && npm run calls:test && npm run call-session:test && npm run screen-share:test && npm run turn:test && npm run games:test && npm run wyr:test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

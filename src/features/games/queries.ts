@@ -8,9 +8,14 @@ import type { Database } from "@/types/database";
  * Game reads.
  *
  * Through the cookie-bound client throughout, so Row Level Security decides what
- * comes back. `get_game_session` returns the full state only to somebody at the
- * table — a spectator gets the shape of the game and none of its contents, which
- * is enforced in SQL rather than by filtering here.
+ * comes back.
+ *
+ * Nothing here returns game state, and nothing here can. SQL cannot run an
+ * engine, so it cannot redact anything — a game with hidden information would
+ * have none if the raw blob came back on this path. `viewsForRender` in the
+ * runtime computes the same public/private split the socket sends; migration
+ * 0018 removed the column from the RPC and from the client's table grant so
+ * there is no way around it.
  */
 
 type Fn = Database["public"]["Functions"];
@@ -86,8 +91,6 @@ export interface GameSession {
   conversationId: string | null;
   hostId: string;
   status: "lobby" | "active" | "finished" | "abandoned";
-  /** Empty for a spectator — the database withholds it, not this file. */
-  state: unknown;
   stateVersion: number;
   turnSeat: number | null;
   config: Record<string, unknown>;
@@ -142,7 +145,6 @@ export async function getGameSession(sessionId: string): Promise<GameSession | n
     conversationId: row.conversation_id,
     hostId: row.host_id ?? "",
     status: row.status ?? "lobby",
-    state: row.state ?? {},
     stateVersion: row.state_version ?? 0,
     turnSeat: row.turn_seat,
     config: (row.config ?? {}) as Record<string, unknown>,

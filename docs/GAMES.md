@@ -3,10 +3,9 @@
 The machinery that every game runs on, and the one interface a new game has to
 implement.
 
-**No individual game exists yet.** That is deliberate: building the lobby around
-whichever game happened to be written first is how a lobby ends up with that
-game's assumptions baked into it. The five rows in the catalogue all ship
-`enabled = false`, and the engine registry is empty.
+**One game is built: Would You Rather** (§10). The other five catalogue rows
+still ship `enabled = false` and show on the shelf as "Soon" — a game becomes
+playable only when it has both a registered engine and an enabled row.
 
 ---
 
@@ -119,9 +118,26 @@ An engine that returns the whole state from `publicView` has published its own
 secrets, and no amount of care in the transport will fix that — which is why
 `publicView` and `viewFor` are separate methods rather than one with a flag.
 
-The database enforces the same boundary on the HTTP path: `get_game_session`
-returns `state` only to somebody seated. A spectator sees that the game exists,
-who is playing and the score, and none of its contents.
+### The HTTP path had to be fixed too
+
+`get_game_session` originally returned the raw state to anybody seated at the
+table. For a game with no secrets that is harmless — and every game was
+hypothetical when it was written. The first game with hidden answers made it a
+hole: a player could fetch the session mid-round and read everybody's vote
+before the reveal.
+
+SQL cannot run an engine, so it cannot redact anything, and no amount of policy
+writing fixes that. Migration 0018 takes the state off that path entirely:
+
+- `get_game_session` has no `state` column.
+- `authenticated` has a column-level `SELECT` grant on `game_sessions` that
+  omits `state`, so a plain `select *` is refused too.
+- The server component calls `viewsForRender`, which runs the engine and returns
+  the same public/private split the socket sends.
+
+One place decides what is visible, in one language, for every game. A spectator
+sees that the game exists, who is playing and the score, and none of its
+contents.
 
 ---
 
@@ -240,7 +256,8 @@ the caller's own identity before touching the runtime.
 ## 9. Testing
 
 ```
-npm run games:test    105 assertions
+npm run games:test    108 assertions — the machinery
+npm run wyr:test      100 assertions — Would You Rather
 ```
 
 Mostly negative, and aimed at the seam rather than the surface. Can somebody not
@@ -262,14 +279,38 @@ outsider may do neither.
 
 ---
 
-## 10. Not built
+## 10. Would You Rather
 
-- **Any actual game.** By instruction, and by preference: the shelf is honest
-  about it, showing every catalogue entry with "Soon" rather than hiding them and
-  looking empty.
-- **The board.** `Board` in `game-session-view.tsx` is where a game's component
-  mounts, keyed by `session.gameKey`. It currently says so plainly rather than
-  rendering something that looks broken.
+The first game, and the one that proved the architecture by breaking part of it.
+
+Two options, everybody answers at once, nothing is visible until the round
+closes. **Scoring is majority-matching** — there is no right answer to "would
+you rather", so the game asks a different question: are you in step with this
+room? A streak of three starts paying a bonus. An even split scores everybody,
+because nobody is out of step with a room that cannot agree.
+
+Notable pieces, all of which the machinery already supported:
+
+- **Simultaneous, not turn-based.** `turnSeat` stays null, so the database lets
+  any seat move. That puts the duplicate check on the engine, which refuses a
+  second answer from a seat that has already answered — locked in, so nobody can
+  watch the count fill and switch at the last moment.
+- **The timer is closed by the clients.** An engine is pure and cannot see a
+  clock, so when the deadline passes every client asks for a reveal at once and
+  `state_version` settles which one lands. The engine validates the deadline
+  against the server's `now`, with a 2.5-second grace so a fast laptop does not
+  cost somebody their answer.
+- **The last answer reveals immediately** rather than waiting out a timer nobody
+  is waiting for.
+- **Prompts come from the seed.** Deterministic shuffle, no repeats within a
+  session, so a session replays identically from its move log.
+- **Leaving needs no special case.** The runtime hands the engine only the
+  players still present, so a departure changes the tally and nothing else.
+
+## 11. Not built
+
+- **The other five games.** The shelf shows them as "Soon" rather than hiding
+  them and looking empty.
 - **Couple games.** The schema supports them (`game_sessions.couple_id`), the
   lifecycle RPCs currently take a conversation. One branch when couples land.
 - **Spectator private views.** A spectator gets `publicView` and nothing else,
