@@ -572,20 +572,26 @@ let session;
   eq("but the rest of the row is still readable — the lobby needs it", allowed.length, 1);
   eq("including the version", allowed[0].state_version, 2);
 
+  /*
+   * The audit log was the same hole one table over.
+   *
+   * A move's payload IS the move — here, somebody's vote — and `game_moves` was
+   * readable by anybody who could watch. Closed in migration 0019, which the
+   * second game found; the fix applies to every game, including this one.
+   */
   await denied(
-    "the move log does not leak it either",
-    asUser(db, wren, "select payload from public.game_moves where session_id = $1", [session]).then(
-      (r) => {
-        // Moves ARE readable by design — they are the audit trail. What matters
-        // is that a move records only its own author's choice, which is already
-        // public to that author.
-        if (r.rows.every((row) => row.payload.choice !== undefined)) {
-          throw new Error("only the mover's own choice is recorded");
-        }
-        return r;
-      },
-    ),
+    "the move log does not leak a vote either",
+    asUser(db, wren, "select payload from public.game_moves where session_id = $1", [session]),
   );
+
+  const { rows: timeline } = await asUser(
+    db,
+    wren,
+    "select seq, player_id from public.game_moves where session_id = $1",
+    [session],
+  );
+  eq("though the timeline is still visible", timeline.length, 1);
+  eq("showing who moved and when", timeline[0].player_id, ada);
 }
 
 /* ==========================================================================

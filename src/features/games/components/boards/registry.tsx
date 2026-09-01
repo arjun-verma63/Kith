@@ -1,5 +1,6 @@
 "use client";
 
+import { WhoKnowsMeBoard } from "@/features/games/components/boards/who-knows-me-board";
 import { WouldYouRatherBoard } from "@/features/games/components/boards/would-you-rather-board";
 
 /**
@@ -36,7 +37,7 @@ export interface BoardProps {
 }
 
 /** Games with a board. The rest render the "not built yet" panel. */
-const WITH_BOARDS = new Set(["would-you-rather"]);
+const WITH_BOARDS = new Set(["would-you-rather", "who-knows-me"]);
 
 export function hasBoard(gameKey: string): boolean {
   return WITH_BOARDS.has(gameKey);
@@ -46,6 +47,8 @@ export function GameBoard({ gameKey, ...props }: BoardProps & { gameKey: string 
   switch (gameKey) {
     case "would-you-rather":
       return <WouldYouRatherBoard {...props} />;
+    case "who-knows-me":
+      return <WhoKnowsMeBoard {...props} />;
     default:
       return null;
   }

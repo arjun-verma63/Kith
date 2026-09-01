@@ -192,8 +192,8 @@ treating it as fatal would end good calls on every network handover.
 
 ## 8. Games
 
-> Architecture implemented, with **Would You Rather** as the first game.
-> **[GAMES.md](GAMES.md) is the detailed reference.**
+> Architecture implemented, with **Would You Rather** and **Who Knows Me Better?**
+> built on it. **[GAMES.md](GAMES.md) is the detailed reference.**
 
 Games run inside KITH, in a conversation, with the people already in it — never as a
 link somewhere else. The room is the guest list, which is why starting a game asks

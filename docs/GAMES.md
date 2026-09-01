@@ -3,9 +3,10 @@
 The machinery that every game runs on, and the one interface a new game has to
 implement.
 
-**One game is built: Would You Rather** (§10). The other five catalogue rows
-still ship `enabled = false` and show on the shelf as "Soon" — a game becomes
-playable only when it has both a registered engine and an enabled row.
+**Two games are built** (§10): Would You Rather and Who Knows Me Better?. The
+other five catalogue rows still ship `enabled = false` and show on the shelf as
+"Soon" — a game becomes playable only when it has both a registered engine and
+an enabled row.
 
 ---
 
@@ -139,6 +140,28 @@ One place decides what is visible, in one language, for every game. A spectator
 sees that the game exists, who is playing and the score, and none of its
 contents.
 
+### And the audit log was the same hole, one table over
+
+`game_moves` is append-only and readable by anybody who can watch the session,
+which is right for an audit trail and wrong for a game in progress. **A move's
+payload IS the move** — somebody's vote in Would You Rather, the subject's own
+answer in Who Knows Me Better. A guesser could simply `select payload from
+game_moves` mid-round.
+
+Migration 0018 took the state off the client's read path and left this behind,
+because the state was where the secrets obviously lived and the log looked like
+metadata. It is not: it is the same secrets, one row at a time, in commit order.
+
+Migration 0019 applies the same fix. The timeline stays readable — who moved,
+when, in what order — and the payload column is simply not granted:
+
+```sql
+revoke select on public.game_moves from authenticated;
+grant select (session_id, seq, player_id, created_at) on public.game_moves to authenticated;
+```
+
+The runtime reads payloads with the service role, so replay is unaffected.
+
 ---
 
 ## 6. Adding a game
@@ -256,8 +279,9 @@ the caller's own identity before touching the runtime.
 ## 9. Testing
 
 ```
-npm run games:test    108 assertions — the machinery
-npm run wyr:test      100 assertions — Would You Rather
+npm run games:test    109 assertions — the machinery
+npm run wyr:test      102 assertions — Would You Rather
+npm run wkm:test      112 assertions — Who Knows Me Better?
 ```
 
 Mostly negative, and aimed at the seam rather than the surface. Can somebody not
@@ -279,7 +303,9 @@ outsider may do neither.
 
 ---
 
-## 10. Would You Rather
+## 10. The games
+
+### Would You Rather
 
 The first game, and the one that proved the architecture by breaking part of it.
 
@@ -306,6 +332,40 @@ Notable pieces, all of which the machinery already supported:
   session, so a session replays identically from its move log.
 - **Leaving needs no special case.** The runtime hands the engine only the
   players still present, so a departure changes the tally and nothing else.
+
+### Who Knows Me Better?
+
+One person is the subject; a question is asked about them; they pick the true
+answer while everybody else guesses it. Reveal together, score the people who
+knew, rotate.
+
+**It hides two things, not one, and that is the whole difference.** Would You
+Rather hides each person's own answer from everybody. This hides:
+
+- the subject's answer, from the guessers — or there is nothing to guess;
+- every guess, from everybody **including the subject** — or the subject can
+  pick whatever the room already committed to, and the round is a formality.
+
+The second is the one that is easy to get wrong, because letting the subject see
+how the room is leaning feels harmless. `viewFor(subjectSeat)` returning an
+empty `guesses` map is asserted directly.
+
+Other decisions worth the words:
+
+- **The subject does not score.** They are the question, not a player of it —
+  which is only fair if everybody is the subject the same number of times, so the
+  round count is always a whole number of laps. Two players get two laps, six get
+  one.
+- **A round with no answer is void, not lost.** If the subject times out there is
+  nothing to be right about, so nobody scores — and, importantly, nobody's streak
+  is broken by somebody else's silence.
+- **Option order is shuffled per round.** An answer that is always third is not a
+  secret.
+- **The rotation steps over people who have left.** A subject who is gone cannot
+  answer, so the round would be unanswerable.
+- Indices are stored canonically and converted to display positions in one place,
+  so the shuffle can never make the state and the UI disagree about which option
+  was picked.
 
 ## 11. Not built
 

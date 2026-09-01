@@ -18,7 +18,18 @@
  *     npm run games:test
  */
 
+import { register } from "node:module";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+
 import { asService, asUser, asUserOnTopic, createUser, freshDatabase } from "./harness.mjs";
+
+register(pathToFileURL(join(import.meta.dirname, "alias-loader.mjs")).href);
+
+// Importing the index registers every engine, which is how the application
+// learns what is playable. The catalogue has to agree with it.
+const { registeredKeys } = await import("../../src/features/games/engine/index.ts");
+const ENGINE_KEYS = registeredKeys();
 
 let passed = 0;
 let failed = 0;
@@ -199,18 +210,25 @@ section("The catalogue");
   const { rows } = await asUser(db, ada, "select * from public.list_games()");
   truthy("every member can read the shelf", rows.length > 0);
 
-  // A game is enabled only once it has an engine. Would You Rather has one
-  // (migration 0018); the five placeholders from migration 0007 do not, and are
-  // still on the shelf marked "Soon" rather than hidden.
-  const placeholders = rows.filter((g) => g.key !== "reference" && g.key !== "would-you-rather");
+  /*
+   * A game is playable only when both are true: an engine is registered, and the
+   * catalogue row is enabled. Asserted against the registry itself rather than a
+   * list of names — the list was wrong within a day of being written, and this
+   * is the actual rule.
+   *
+   * "reference" is this suite's own row and has no engine in `src/`, so it is
+   * excluded from the comparison.
+   */
+  const enabled = rows
+    .filter((g) => g.enabled && g.key !== "reference")
+    .map((g) => g.key)
+    .sort();
+
+  eq("exactly the games with engines are enabled", enabled, [...ENGINE_KEYS].sort());
+  truthy("and there is at least one", enabled.length > 0);
   eq(
-    "a game without an engine stays disabled",
-    placeholders.every((g) => g.enabled === false),
-    true,
-  );
-  eq(
-    "and the one with an engine is enabled",
-    rows.find((g) => g.key === "would-you-rather")?.enabled,
+    "everything else stays on the shelf as coming",
+    rows.filter((g) => !g.enabled).every((g) => !ENGINE_KEYS.includes(g.key)),
     true,
   );
 

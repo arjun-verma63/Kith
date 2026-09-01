@@ -1,7 +1,12 @@
 import { registerEngine } from "@/features/games/engine/registry";
+import {
+  DEADLINE_GRACE_MS,
+  mulberry32,
+  outcomeFrom,
+  shuffled,
+} from "@/features/games/engine/support";
 import type {
   GameEngine,
-  GameOutcome,
   MoveContext,
   MoveResult,
   PlayerSeat,
@@ -81,40 +86,8 @@ export type Move =
 
 /* ========================================================================== */
 
-/**
- * A seeded shuffle.
- *
- * `Math.random` is banned in an engine — the same session has to replay the same
- * way from its move log, and a bug report about a question is worthless if the
- * questions differ every run. mulberry32 is small, fast and deterministic, which
- * is the whole specification.
- */
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 function draw(seed: number, count: number): Prompt[] {
-  const random = mulberry32(seed);
-  const deck = [...PROMPTS];
-
-  // Fisher-Yates, so every prompt is equally likely and none repeats.
-  for (let i = deck.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(random() * (i + 1));
-    const a = deck[i];
-    const b = deck[j];
-    if (a && b) {
-      deck[i] = b;
-      deck[j] = a;
-    }
-  }
-
-  return deck.slice(0, Math.min(count, deck.length));
+  return shuffled(PROMPTS, mulberry32(seed)).slice(0, Math.min(count, PROMPTS.length));
 }
 
 function zeroed(players: PlayerSeat[]): Record<number, number> {
@@ -173,38 +146,6 @@ function reveal(state: State, players: PlayerSeat[]): State {
     scores,
     streaks,
     lastResult: { tally, majority, scored },
-  };
-}
-
-function finalOutcome(state: State, players: PlayerSeat[]): GameOutcome {
-  const scores = Object.fromEntries(
-    players.map((player) => [player.seat, state.scores[player.seat] ?? 0]),
-  );
-
-  const ordered = [...players].sort((x, y) => (scores[y.seat] ?? 0) - (scores[x.seat] ?? 0));
-
-  const placements: Record<number, number> = {};
-  let placement = 0;
-  let previous: number | null = null;
-
-  ordered.forEach((player, index) => {
-    const score = scores[player.seat] ?? 0;
-    // Ties share a place: two people on the same score are both second.
-    if (score !== previous) {
-      placement = index + 1;
-      previous = score;
-    }
-    placements[player.seat] = placement;
-  });
-
-  const best = ordered.length > 0 ? (scores[ordered[0]!.seat] ?? 0) : 0;
-  const winnerSeats = ordered.filter((p) => (scores[p.seat] ?? 0) === best).map((p) => p.seat);
-
-  return {
-    scores,
-    placements,
-    // Everybody tying is a draw, not a six-way win.
-    winnerSeats: winnerSeats.length === players.length && players.length > 1 ? [] : winnerSeats,
   };
 }
 
@@ -267,7 +208,7 @@ export const wouldYouRather: GameEngine<State, Move> = {
           return { ok: false, reason: "You have already answered." };
         }
 
-        if (now > state.deadline + GRACE_MS) {
+        if (now > state.deadline + DEADLINE_GRACE_MS) {
           return { ok: false, reason: "Time is up." };
         }
 
@@ -310,7 +251,7 @@ export const wouldYouRather: GameEngine<State, Move> = {
             ok: true,
             state: { ...state, round },
             turnSeat: null,
-            outcome: finalOutcome(state, players),
+            outcome: outcomeFrom(state.scores, players),
           };
         }
 
@@ -379,15 +320,6 @@ export const wouldYouRather: GameEngine<State, Move> = {
       : `Round ${state.round + 1} revealed`;
   },
 };
-
-/**
- * A little slack on the deadline.
- *
- * The client's clock and the server's are not the same clock, and a round trip
- * takes time. Somebody who pressed a button with a second to spare should not be
- * told they were late because their laptop is two seconds fast.
- */
-const GRACE_MS = 2500;
 
 registerEngine(wouldYouRather);
 
