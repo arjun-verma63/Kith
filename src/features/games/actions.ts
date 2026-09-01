@@ -142,10 +142,53 @@ export async function rematchAction(sessionId: string): Promise<GameActionResult
   if (!parsed.success) return { ok: false, reason: "That game could not be found." };
 
   const previous = await getGameSession(parsed.data);
-  if (!previous?.conversationId) return { ok: false, reason: "That game cannot be replayed." };
+  if (!previous) return { ok: false, reason: "That game could not be found." };
   if (previous.mySeat === null) return { ok: false, reason: "You were not in that game." };
 
-  return createGameAction(previous.conversationId, previous.gameKey, previous.id);
+  // A session belongs to a conversation OR a couple, never both, so a rematch
+  // reopens in whichever one it was played in.
+  if (previous.coupleId) {
+    return createCoupleGameAction(previous.coupleId, previous.gameKey, previous.id);
+  }
+  if (previous.conversationId) {
+    return createGameAction(previous.conversationId, previous.gameKey, previous.id);
+  }
+
+  return { ok: false, reason: "That game cannot be replayed." };
+}
+
+/**
+ * Opens a couple game.
+ *
+ * Separate from `createGameAction` because the scopes are genuinely different:
+ * a conversation game rings a room and waits for whoever turns up, a couple game
+ * has both players from the start and only has to wait for them to be ready.
+ */
+export async function createCoupleGameAction(
+  coupleId: string,
+  key: string,
+  rematchOf?: string,
+): Promise<GameActionResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, reason: "Sign in again." };
+
+  const couple = uuid.safeParse(coupleId);
+  const parsedKey = gameKey.safeParse(key);
+  if (!couple.success || !parsedKey.success) {
+    return { ok: false, reason: "That game could not be started." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("create_couple_game", {
+    p_couple_id: couple.data,
+    p_game_key: parsedKey.data,
+    p_rematch_of: rematchOf && uuid.safeParse(rematchOf).success ? rematchOf : null,
+  });
+
+  if (error || !data) return { ok: false, reason: explain(error?.message) };
+
+  revalidatePath("/couple");
+  return { ok: true, sessionId: data };
 }
 
 /* -------------------------------------------------------------------- play */

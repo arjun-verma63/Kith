@@ -1,7 +1,13 @@
 import { redirect } from "next/navigation";
 
 import { CoupleView } from "@/features/couple/components/couple-view";
-import { getMyCouple, getWhoCanPropose, listInvitations } from "@/features/couple/queries";
+import {
+  getMyCouple,
+  getWhoCanPropose,
+  listCoupleGameHistory,
+  listCoupleGames,
+  listInvitations,
+} from "@/features/couple/queries";
 import { openTodaysPromptAction } from "@/features/couple/actions";
 import { getCurrentUser } from "@/lib/supabase/server";
 
@@ -30,7 +36,13 @@ export default async function CouplePage() {
     getWhoCanPropose(),
   ]);
 
-  const prompts = couple ? await openTodaysPromptAction(couple.id) : [];
+  const [prompts, games, history] = couple
+    ? await Promise.all([
+        openTodaysPromptAction(couple.id),
+        listCoupleGames(),
+        listCoupleGameHistory(couple.id),
+      ])
+    : [[], [], []];
 
   return (
     <CoupleView
@@ -38,6 +50,8 @@ export default async function CouplePage() {
       invitations={invitations}
       prompts={prompts}
       whoCanPropose={whoCanPropose}
+      games={games}
+      gameHistory={history}
     />
   );
 }

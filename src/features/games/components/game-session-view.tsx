@@ -17,7 +17,12 @@ import {
   startGameAction,
   submitMoveAction,
 } from "@/features/games/actions";
-import { GameBoard, hasBoard } from "@/features/games/components/boards/registry";
+import {
+  GameBoard,
+  GameResult,
+  hasBoard,
+  hasOwnResult,
+} from "@/features/games/components/boards/registry";
 import type { GameSession, GamePlayer } from "@/features/games/queries";
 import {
   useGameSession,
@@ -422,6 +427,8 @@ function Results({ session, view }: { session: GameSession; view: GameView }) {
 
   const winners = session.players.filter((player) => player.placement === 1);
   const abandoned = session.status === "abandoned";
+  // A co-operative game writes its own ending. See the registry.
+  const ownResult = !abandoned && hasOwnResult(session.gameKey);
 
   return (
     <Panel
@@ -431,6 +438,8 @@ function Results({ session, view }: { session: GameSession; view: GameView }) {
     >
       {abandoned ? (
         <p className="text-sm text-fg-dim">This game was abandoned before it finished.</p>
+      ) : ownResult ? (
+        <GameResult gameKey={session.gameKey} publicState={view.publicState} />
       ) : winners.length === 0 ? (
         <p className="heading text-md text-fg-loud">A draw.</p>
       ) : (

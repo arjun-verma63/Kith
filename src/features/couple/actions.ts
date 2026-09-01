@@ -231,3 +231,33 @@ export async function refreshCoupleAction(): Promise<{
   const couple = await getMyCouple();
   return { couple, prompts: couple ? await listPrompts(couple.id) : [] };
 }
+
+/**
+ * Opens a couple game.
+ *
+ * A thin hop into the games slice's action, which is where the game lifecycle
+ * lives. Re-exported here so the couple page never imports another feature —
+ * the boundary is worth one wrapper.
+ */
+export async function startCoupleGameAction(
+  coupleId: string,
+  gameKey: string,
+): Promise<{ ok: true; sessionId: string } | { ok: false; reason: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, reason: "Sign in again." };
+
+  const parsed = uuid.safeParse(coupleId);
+  if (!parsed.success) return { ok: false, reason: "That could not be found." };
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("create_couple_game", {
+    p_couple_id: parsed.data,
+    p_game_key: gameKey,
+    p_rematch_of: null,
+  });
+
+  if (error || !data) return { ok: false, reason: explain(error?.message) };
+
+  revalidatePath("/couple");
+  return { ok: true, sessionId: data };
+}

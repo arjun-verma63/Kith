@@ -16,7 +16,14 @@ import {
   setCoupleDetailsAction,
   setWhoCanProposeAction,
 } from "@/features/couple/actions";
-import type { Couple, CoupleInvitation, CouplePrompt } from "@/features/couple/queries";
+import { CoupleGames } from "@/features/couple/components/couple-games";
+import type {
+  Couple,
+  CoupleGame,
+  CoupleGameSession,
+  CoupleInvitation,
+  CouplePrompt,
+} from "@/features/couple/queries";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -41,11 +48,15 @@ export function CoupleView({
   invitations,
   prompts,
   whoCanPropose,
+  games,
+  gameHistory,
 }: {
   couple: Couple | null;
   invitations: CoupleInvitation[];
   prompts: CouplePrompt[];
   whoCanPropose: "everyone" | "friends" | "nobody";
+  games: CoupleGame[];
+  gameHistory: CoupleGameSession[];
 }) {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 py-10 sm:px-10">
@@ -66,6 +77,7 @@ export function CoupleView({
         <>
           <Together couple={couple} />
           <DailyQuestion couple={couple} prompts={prompts} />
+          <CoupleGames coupleId={couple.id} games={games} history={gameHistory} />
           <Settings couple={couple} />
         </>
       ) : (

@@ -832,6 +832,14 @@ export type Database = {
             anniversary: string | null;
         }[];
       };
+      create_couple_game: {
+        Args: {
+          p_couple_id: string;
+          p_game_key: string;
+          p_rematch_of?: string | null;
+        };
+        Returns: string;
+      };
       create_game_session: {
         Args: {
           p_conversation_id: string;
@@ -892,7 +900,9 @@ export type Database = {
             min_players: number | null;
             max_players: number | null;
             pace: Database["public"]["Enums"]["game_pace"] | null;
+            audience: Database["public"]["Enums"]["game_audience"] | null;
             conversation_id: string | null;
+            couple_id: string | null;
             host_id: string | null;
             status: Database["public"]["Enums"]["game_status"] | null;
             state_version: number | null;
@@ -1027,6 +1037,21 @@ export type Database = {
             other_avatar_path: string | null;
             other_status: Database["public"]["Enums"]["presence_status"] | null;
             other_last_seen_at: string | null;
+        }[];
+      };
+      list_couple_games: {
+        Args: {
+          p_couple_id: string;
+          p_limit?: number | null;
+        };
+        Returns: {
+            id: string | null;
+            game_key: string | null;
+            game_name: string | null;
+            status: Database["public"]["Enums"]["game_status"] | null;
+            our_score: number | null;
+            created_at: string | null;
+            ended_at: string | null;
         }[];
       };
       list_couple_invitations: {

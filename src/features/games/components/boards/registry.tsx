@@ -1,6 +1,7 @@
 "use client";
 
 import { DrawGuessBoard } from "@/features/games/components/boards/draw-guess-board";
+import { HowWellBoard, HowWellResult } from "@/features/games/components/boards/how-well-board";
 import { WhoKnowsMeBoard } from "@/features/games/components/boards/who-knows-me-board";
 import { WouldYouRatherBoard } from "@/features/games/components/boards/would-you-rather-board";
 
@@ -43,7 +44,7 @@ export interface BoardProps {
 }
 
 /** Games with a board. The rest render the "not built yet" panel. */
-const WITH_BOARDS = new Set(["would-you-rather", "who-knows-me", "draw-guess"]);
+const WITH_BOARDS = new Set(["would-you-rather", "who-knows-me", "draw-guess", "how-well"]);
 
 export function hasBoard(gameKey: string): boolean {
   return WITH_BOARDS.has(gameKey);
@@ -57,6 +58,38 @@ export function GameBoard({ gameKey, ...props }: BoardProps & { gameKey: string 
       return <WhoKnowsMeBoard {...props} />;
     case "draw-guess":
       return <DrawGuessBoard {...props} />;
+    case "how-well":
+      return <HowWellBoard {...props} />;
+    default:
+      return null;
+  }
+}
+
+/**
+ * A game that ends its own way.
+ *
+ * The generic winner panel names whoever came first, which is right for the
+ * three competitive games and wrong for a co-operative one — How Well Do You
+ * Know Me? would announce that both people won, which is technically true and
+ * completely the wrong tone.
+ *
+ * A game with its own result renders it instead. Everything else keeps the
+ * shared panel.
+ */
+const WITH_RESULTS = new Set(["how-well"]);
+
+export function hasOwnResult(gameKey: string): boolean {
+  return WITH_RESULTS.has(gameKey);
+}
+
+export function GameResult({ gameKey, publicState }: { gameKey: string; publicState: unknown }) {
+  const state = publicState as { score?: number; played?: number; totalRounds?: number } | null;
+
+  switch (gameKey) {
+    case "how-well":
+      return (
+        <HowWellResult score={state?.score ?? 0} total={state?.played ?? state?.totalRounds ?? 0} />
+      );
     default:
       return null;
   }

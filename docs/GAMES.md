@@ -3,10 +3,11 @@
 The machinery that every game runs on, and the one interface a new game has to
 implement.
 
-**Three games are built** (§10): Would You Rather, Who Knows Me Better? and
-Draw & Guess. The remaining catalogue rows still ship `enabled = false` and show
-on the shelf as "Soon" — a game becomes playable only when it has both a
-registered engine and an enabled row.
+**Four games are built** (§10): Would You Rather, Who Knows Me Better?,
+Draw & Guess, and How Well Do You Know Me? — the first for couples. The
+remaining catalogue rows still ship `enabled = false` and show on the shelf as
+"Soon"; a game becomes playable only when it has both a registered engine and an
+enabled row.
 
 ---
 
@@ -283,6 +284,7 @@ npm run games:test    109 assertions — the machinery
 npm run wyr:test      102 assertions — Would You Rather
 npm run wkm:test      112 assertions — Who Knows Me Better?
 npm run draw:test     125 assertions — Draw & Guess, including the wire protocol
+npm run howwell:test   95 assertions — How Well, and the couple scope
 ```
 
 Mostly negative, and aimed at the seam rather than the surface. Can somebody not
@@ -429,7 +431,71 @@ the current drawer are therefore ignored client-side. The worst a mischievous
 player can do is send messages nobody applies — worth knowing, and written down
 rather than discovered.
 
-## 11. Not built
+### How Well Do You Know Me?
+
+The first **couple** game, and the first one with no winner.
+
+Each round asks about one of the two. That person answers honestly, the other
+guesses what they said, both submit at once, and the answers appear together.
+Next round it is about the other one.
+
+#### There is no winner, deliberately
+
+Every other game here ranks its players. This one must not. Two people who are
+together, playing a game that ends by telling one of them they know the other
+better than they are known, is a subtly hostile object — and the thing they
+actually want to find out is a fact about the pair.
+
+So **the score is shared**: one number, both seats carrying it, both listed as
+winners, and a result panel built around a single figure rather than a table.
+The engine returns `winnerSeats: [0, 1]` on purpose.
+
+The generic winner panel would announce that both people won — true, and
+completely the wrong tone — so a game may now supply its own ending. `hasOwnResult`
+in the board registry is that seam; everything else keeps the shared panel.
+
+#### Playful, not a measurement
+
+The brief was explicit, so it is **asserted rather than intended**. The result
+comes back as a band with a joke attached ("Suspiciously perfect", "Have you two
+met?") rather than a percentage with a verdict, the panel carries a line saying
+outright that it measures nothing, and the suite greps the copy for clinical
+language — `compatib`, `psycholog`, `percentile`, `healthy`, `concern`. A number
+that looks scientific invites people to believe it, and this is a multiple-choice
+quiz about holidays.
+
+#### Both act every round
+
+Which is the difference from Who Knows Me Better, where the subject sits out.
+With exactly two people, somebody sitting out is half the room doing nothing.
+
+## 11. The couple scope
+
+`game_sessions` has had two scopes since migration 0007 — a conversation **or** a
+couple, exactly one, which is what lets one table, one engine and one set of
+policies serve both. Migration 0017 built the lifecycle and only handled
+conversations; migration 0022 finished it.
+
+Almost nothing new was needed, which is the point. `can_view_game_session`
+already understood couples, so joining, readiness, starting, moving, scoring,
+leaving and rematching all worked unchanged. What was missing was a way to
+**open** one:
+
+- `create_couple_game(couple_id, game_key)` seats both partners immediately —
+  there is no lobby to fill when the guest list is two people who are both
+  already known. They still ready up, which is how you say you are at your desk.
+- The catalogue decides what a couple may play: `audience = 'couple'`, enforced
+  in SQL rather than by the UI offering the right list.
+- `get_game_session` gained `couple_id`, because rematch reopens a session in the
+  scope it was played in and had nowhere to look.
+- `list_couple_games` is the history, and takes `max(score)` rather than a sum —
+  a co-operative game writes the same number to both rows.
+
+Couple games are offered on the **couple page**, not the games shelf. Putting one
+beside Draw & Guess would mean asking "who do you want to play this with", which
+is the one question it does not have.
+
+## 12. Not built
 
 - **The other five games.** The shelf shows them as "Soon" rather than hiding
   them and looking empty.

@@ -223,3 +223,58 @@ export async function getWhoCanPropose(): Promise<"friends" | "nobody"> {
 
   return data?.who_can_propose === "nobody" ? "nobody" : "friends";
 }
+
+export interface CoupleGame {
+  key: string;
+  name: string;
+  tagline: string | null;
+}
+
+/** The games a couple may play. Audience `couple`, and actually enabled. */
+export async function listCoupleGames(): Promise<CoupleGame[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("list_games");
+
+  if (error || !data) return [];
+
+  return data.flatMap((row) =>
+    row.key && row.enabled && row.audience === "couple"
+      ? [{ key: row.key, name: row.name ?? row.key, tagline: row.tagline }]
+      : [],
+  );
+}
+
+export interface CoupleGameSession {
+  id: string;
+  gameKey: string;
+  gameName: string;
+  status: "lobby" | "active" | "finished" | "abandoned";
+  ourScore: number;
+  createdAt: string;
+}
+
+/** What the two of them have played. The history the brief asked for. */
+export async function listCoupleGameHistory(coupleId: string): Promise<CoupleGameSession[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("list_couple_games", {
+    p_couple_id: coupleId,
+    p_limit: 20,
+  });
+
+  if (error || !data) return [];
+
+  return data.flatMap((row) =>
+    row.id
+      ? [
+          {
+            id: row.id,
+            gameKey: row.game_key ?? "",
+            gameName: row.game_name ?? "",
+            status: row.status ?? "finished",
+            ourScore: row.our_score ?? 0,
+            createdAt: row.created_at ?? new Date().toISOString(),
+          },
+        ]
+      : [],
+  );
+}

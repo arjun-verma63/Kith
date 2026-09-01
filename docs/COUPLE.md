@@ -150,11 +150,19 @@ everyone, and a new couple is invisible until somebody changes it.
 
 ---
 
-## 7. Not built
+## 7. Games
 
-- **Couple games.** `game_sessions.couple_id` exists and the catalogue has a
-  `couple` audience, but the lifecycle RPCs take a conversation. One branch when
-  it matters.
+Couple games are offered on this page rather than the games shelf, because a
+couple game does not have the question a shelf asks — "who with". The first is
+**How Well Do You Know Me?**, which is co-operative and has no winner; see
+[GAMES.md §10](GAMES.md).
+
+The history the two of them have played, with scores, sits under it.
+
+---
+
+## 8. Not built
+
 - **Anniversary reminders.** The date is stored and shown; nothing notifies.
 - **A shared space beyond the daily question** — photos, notes, a list. The
   schema does not assume any of it.

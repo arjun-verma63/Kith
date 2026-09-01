@@ -88,7 +88,10 @@ export interface GameSession {
   minPlayers: number;
   maxPlayers: number;
   pace: "turn_based" | "realtime";
+  audience: "group" | "couple";
   conversationId: string | null;
+  /** A couple session has this instead of a conversation. Exactly one is set. */
+  coupleId: string | null;
   hostId: string;
   status: "lobby" | "active" | "finished" | "abandoned";
   stateVersion: number;
@@ -142,7 +145,9 @@ export async function getGameSession(sessionId: string): Promise<GameSession | n
     minPlayers: row.min_players ?? 2,
     maxPlayers: row.max_players ?? 6,
     pace: row.pace ?? "turn_based",
+    audience: row.audience ?? "group",
     conversationId: row.conversation_id,
+    coupleId: row.couple_id,
     hostId: row.host_id ?? "",
     status: row.status ?? "lobby",
     stateVersion: row.state_version ?? 0,
