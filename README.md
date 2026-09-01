@@ -59,6 +59,7 @@ served from our own origin.
 | `npm run mobile:test`        | Static mobile invariants — viewport units, layering, touch |
 | `npm run pwa:test`           | Manifest, icons, and the service worker's safety rules     |
 | `npm run perf:test`          | Round trips, cleanup, re-render pressure, pagination       |
+| `npm run security:test`      | Attacks, as a member of the room whose account is stolen   |
 | `npm run profile:test`       | Profile triggers, username rules, storage policies         |
 | `npm run friends:test`       | Requests, friendships, the constraints behind them         |
 | `npm run presence:test`      | The presence resolution rule and its channel policy        |
@@ -208,6 +209,18 @@ request-cached, so a render revalidates the JWT once rather than three times; an
 five landing components stopped being client components. It also records a method
 error worth not repeating — `.next/static/chunks/` is not what a browser
 downloads, and reading it that way makes zod look like a 277 kB problem it is not.
+
+**[docs/SECURITY.md](docs/SECURITY.md)** is the security audit. Six
+vulnerabilities, found by attempting the attacks rather than by reading the
+policies, and fixed in one migration: a `SECURITY DEFINER` function that leaked
+another member's settings a bit at a time; unlimited invite codes, which meant
+the room was not actually closed; no rate limit on messages; a blocked person who
+could be added to a group, silently taking the group away from whoever did the
+blocking; three maintenance sweepers callable from a browser console; and a
+client-supplied `created_at` that made the new rate limit decorative and let a
+message pin itself to the top of a thread. It also records what the audit got
+wrong on the way — a test helper that reported false passes, and a harness more
+permissive than production.
 
 **[docs/PWA.md](docs/PWA.md)** covers installing KITH to a home screen. The short
 version of the important part: **there is no push.** KITH's notifications are

@@ -81,7 +81,14 @@ const conversationId = dm[0].id;
 
 const before = await countFor(db, rafa, "message");
 
-for (let i = 0; i < 40; i += 1) {
+/*
+ * Twenty, not forty. The collapse rule is proven by any number above one, and
+ * migration 0028 caps a session at thirty messages a minute — a suite that
+ * needs a burst larger than a real person can send is testing the limit by
+ * accident, and would fail for a reason that has nothing to do with
+ * notifications.
+ */
+for (let i = 0; i < 20; i += 1) {
   await asUser(
     db,
     ada,
@@ -91,7 +98,7 @@ for (let i = 0; i < 40; i += 1) {
 }
 
 eq(
-  "forty messages produce ONE notification, not forty",
+  "twenty messages produce ONE notification, not twenty",
   (await countFor(db, rafa, "message")) - before,
   1,
 );

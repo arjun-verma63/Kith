@@ -658,6 +658,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      rate_events: {
+        Row: {
+          id: number;
+          user_id: string;
+          kind: string;
+          at: string;
+        };
+        Insert: {
+          id?: number;
+          user_id: string;
+          kind: string;
+          at?: string;
+        };
+        Update: {
+          id?: number;
+          user_id?: string;
+          kind?: string;
+          at?: string;
+        };
+        Relationships: [];
+      };
       reports: {
         Row: {
           id: string;

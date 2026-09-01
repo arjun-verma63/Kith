@@ -242,7 +242,16 @@ const DEFAULT_PRIVILEGES = /* sql */ `
   grant usage, select on all sequences in schema realtime to anon, authenticated, service_role;
   grant all on all tables in schema storage to anon, authenticated, service_role;
   grant all on all tables in schema auth to service_role;
-  grant select on auth.users to authenticated;
+  -- NO grant on auth.users.
+  --
+  -- The harness used to hand the authenticated role a SELECT here, and it made
+  -- the suite lie: a probe asking "can a member read everybody's email address"
+  -- came back yes, in a harness more permissive than production.
+  --
+  -- Real Supabase gives that role no privilege on the auth schema at all, and
+  -- PostgREST is not configured to route to it either. Nothing in any policy or
+  -- query path reads this table; only the signup trigger does, and it runs as
+  -- its definer.
 `;
 
 export function migrationFiles() {
