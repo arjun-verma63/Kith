@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en" data-theme="dusk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0e0b0a" />
+    <title>Offline · KITH</title>
+
+    <!--
+      Deliberately one file with no dependencies.
+
+      An offline page that loads a stylesheet, a font or a JavaScript chunk is an
+      offline page that only works when those are already cached — which is to
+      say, not when it is needed. So the colours are literals rather than tokens,
+      the type is a system stack rather than Fraunces, and there is no script.
+
+      The duplication with tokens.css is the point: this file has to survive the
+      one condition where the rest of the app cannot reach it.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 1.5rem;
+        padding: 2rem max(1.5rem, env(safe-area-inset-left))
+          calc(2rem + env(safe-area-inset-bottom));
+        background-color: #0e0b0a;
+        color: #b9aca4;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        font-size: 15px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .mark {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+      }
+
+      .mark span {
+        font-size: 1.0625rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        color: #f5efe9;
+      }
+
+      h1 {
+        margin: 0;
+        max-width: 18ch;
+        font-size: clamp(1.75rem, 7vw, 2.5rem);
+        font-weight: 600;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        color: #f5efe9;
+      }
+
+      p {
+        margin: 0;
+        max-width: 42ch;
+      }
+
+      button {
+        margin-top: 0.5rem;
+        padding: 0.6875rem 1.25rem;
+        font: inherit;
+        font-size: 0.9375rem;
+        color: #e8613c;
+        background: transparent;
+        border: 1px solid rgb(232 97 60 / 0.45);
+        border-radius: 0.625rem;
+        cursor: pointer;
+        /* 44px, the same floor the app uses on a touch device. */
+        min-height: 2.75rem;
+      }
+
+      button:hover {
+        background: rgb(232 97 60 / 0.12);
+        border-color: #e8613c;
+      }
+
+      button:focus-visible {
+        outline: 2px solid #e8613c;
+        outline-offset: 2px;
+      }
+
+      .note {
+        margin-top: 0.5rem;
+        font-size: 0.6875rem;
+        color: #6f635c;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="mark">
+      <svg width="18" height="18" viewBox="0 0 32 32" aria-hidden="true">
+        <path
+          d="M11 7v18M11 16.2l8.5-9M11 15.8l8.5 9"
+          stroke="#e8613c"
+          stroke-width="3"
+          stroke-linecap="round"
+          fill="none"
+        />
+      </svg>
+      <span>KITH</span>
+    </div>
+
+    <h1>You are offline.</h1>
+
+    <p>
+      KITH is a room with other people in it, so there is not much to do in here without a
+      connection. Everything is where you left it.
+    </p>
+
+    <!--
+      `location.reload()` rather than a link: this page is served by the service
+      worker in place of whatever was being opened, so the address bar still
+      holds the real destination. Reloading tries that again; a link to "/" would
+      quietly send somebody somewhere they were not going.
+    -->
+    <button type="button" onclick="location.reload()">Try again</button>
+
+    <p class="note">Nothing has been lost. Messages send when you are back.</p>
+  </body>
+</html>

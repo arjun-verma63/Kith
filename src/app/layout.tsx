@@ -3,6 +3,7 @@ import { Fraunces, Manrope, Martian_Mono } from "next/font/google";
 
 import { APP, DEFAULT_THEME, THEME_STORAGE_KEY } from "@/lib/constants";
 import { clientEnv } from "@/lib/env/client";
+import { ServiceWorker } from "@/features/pwa/service-worker";
 
 import "./globals.css";
 
@@ -42,6 +43,40 @@ export const metadata: Metadata = {
   applicationName: APP.name,
   // KITH is invite-only. There is nothing here for a search engine.
   robots: { index: false, follow: false },
+
+  /*
+   * iOS does not read the manifest for any of this.
+   *
+   * `capable` is what makes an icon added to the home screen open without
+   * Safari's chrome; without it the manifest's `display: standalone` is ignored
+   * and the app opens in a tab with an address bar.
+   *
+   * `statusBarStyle: "black-translucent"` lets the page draw under the status
+   * bar, which is the other half of `viewport-fit: cover` and the reason the
+   * header pads itself by `--safe-t`.
+   */
+  appleWebApp: {
+    capable: true,
+    title: APP.name,
+    statusBarStyle: "black-translucent",
+  },
+
+  /*
+   * iOS ignores the manifest icons too, and it does not respect transparency —
+   * see scripts/generate-icons.mjs for why this is a different file from the
+   * other two rather than the same one at another size.
+   */
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+
+  // Stops iOS and Android turning bare numbers into "call this" links, which on
+  // a page full of scores and timestamps is a lot of false positives.
+  formatDetection: { telephone: false },
   openGraph: {
     title: `${APP.name} — ${APP.tagline}`,
     description: APP.description,
@@ -52,6 +87,16 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   colorScheme: "dark light",
+  /*
+   * The colour the browser paints its own chrome with — the status bar on
+   * Android, the surround of an installed window.
+   *
+   * A static value here is only the starting point. KITH's theme is a stored
+   * preference rather than a system one, so somebody who chose Daylight on a
+   * dark-mode phone would get an ember-black status bar above a light app. The
+   * appearance bootstrap rewrites this tag to match what was actually chosen;
+   * this is what is painted before that runs.
+   */
   themeColor: "#0e0b0a",
   /*
    * Lets the page reach under the notch and the home indicator, which is what
@@ -76,7 +121,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="room grain flex min-h-full flex-col text-fg">{children}</body>
+      <body className="room grain flex min-h-full flex-col text-fg">
+        {children}
+        {/* Registered from the root rather than the signed-in shell, so the app
+            is installable from the page somebody actually lands on. */}
+        <ServiceWorker />
+      </body>
     </html>
   );
 }

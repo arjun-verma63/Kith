@@ -62,8 +62,13 @@ export const config = {
      *   - /auth/* , which performs its own session work and must not be
      *     redirected before it can consume a one-time token
      *   - the health endpoint, which is a keepalive ping and needs no session
+     *   - the PWA surface: the manifest, the service worker and the offline
+     *     page. All three are fetched with no session and must answer the same
+     *     way to everybody — a manifest that 307s to /login is a manifest a
+     *     browser refuses to install from, and a service worker served a
+     *     redirect fails registration outright.
      *   - static asset extensions
      */
-    "/((?!_next/static|_next/image|auth/|api/health|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf)$).*)",
+    "/((?!_next/static|_next/image|auth/|api/health|manifest.webmanifest|sw.js|offline.html|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf)$).*)",
   ],
 };

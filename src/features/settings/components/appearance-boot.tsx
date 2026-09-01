@@ -39,10 +39,29 @@ export function AppearanceBoot({
    * but they are still interpolated into a script, so they go through
    * JSON.stringify rather than into a template literal on trust.
    */
+  /*
+   * The browser chrome is repainted here too.
+   *
+   * `theme_color` in the manifest and `<meta name="theme-color">` in the head
+   * are both single static values, and neither can express "whatever this person
+   * chose" — KITH's theme is a stored preference rather than a system one, so a
+   * Daylight user on a dark-mode phone would otherwise get a near-black status
+   * bar above a light app.
+   *
+   * The two literals are the `--ground` values from tokens.css — the body, not
+   * the header, because the header is a translucent panel drawn on top of it and
+   * because the landing page has no header at all. Duplicated rather than read
+   * back with `getComputedStyle`, since this runs before the stylesheet is
+   * guaranteed to have applied and a right-but-late colour is worse than a
+   * wrong-but-instant one.
+   */
   const script = `(function(){try{
 var t=${JSON.stringify(theme)},m=${JSON.stringify(motion)},r=document.documentElement;
-r.dataset.theme=t==="system"?(matchMedia("(prefers-color-scheme: light)").matches?"daylight":"dusk"):t;
+var resolved=t==="system"?(matchMedia("(prefers-color-scheme: light)").matches?"daylight":"dusk"):t;
+r.dataset.theme=resolved;
 r.dataset.motion=m;
+var meta=document.querySelector('meta[name="theme-color"]');
+if(meta)meta.setAttribute("content",resolved==="daylight"?"#f5efe7":"#0e0b0a");
 localStorage.setItem("kith-theme",t);
 }catch(e){}})();`;
 

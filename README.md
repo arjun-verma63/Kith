@@ -76,6 +76,7 @@ served from our own origin.
 | `npm run guess:test`         | Guess My Answer, and game configuration                    |
 | `npm run db:types`           | Regenerate `src/types/database.ts` from the migrations     |
 | `npm run db:types:check`     | Fail if the generated types have drifted (for CI)          |
+| `npm run icons`              | Regenerate the PWA icon set from the brand mark            |
 
 ## Structure
 
