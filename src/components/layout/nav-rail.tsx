@@ -1,5 +1,7 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+
 import { DESTINATIONS } from "@/components/layout/destinations";
 import { NavItem } from "@/components/layout/nav-item";
 import { Avatar } from "@/components/ui/avatar";
@@ -133,15 +135,41 @@ export function NavRail({ people = [], counts = {}, me, activeKey, className }: 
  * Re-authored rather than scaled: five primary destinations, the lit edge moves
  * to the bottom of each item, labels shrink to 11px, and the people strip moves
  * out of the navigation entirely (it belongs on Home at this width).
+ *
+ * ── Why a bar and not the header ─────────────────────────────────────────────
+ *
+ * The signed-in header carries ten things. Five of them are destinations, and on
+ * a 375px screen they do not fit beside a logo, a presence count, a bell and an
+ * avatar — they wrap, or they scroll, or they get cut off. Shrinking that row is
+ * the wrong fix: the destinations belong at the bottom of a phone, near the
+ * thumb, which is a different component rather than a smaller one.
+ *
+ * ── It hides itself inside a conversation ────────────────────────────────────
+ *
+ * A message thread is the one place a fixed bottom bar is actively harmful. The
+ * composer lives at the bottom, the software keyboard arrives underneath it, and
+ * on iOS a fixed element ends up floating above the keyboard on top of what you
+ * are typing. So the thread goes full-screen — its own back button, its own
+ * composer — which is what every messaging app on a phone does, for this reason.
  */
 export function NavBar({ counts = {}, className }: Pick<NavRailProps, "counts" | "className">) {
+  const pathname = usePathname();
   const primary = DESTINATIONS.filter((destination) => destination.primary);
+
+  // `/messages` is the list and keeps the bar; `/messages/<id>` is a thread and
+  // does not. Matching on the segment count rather than a regex so a future
+  // `/messages/new` behaves the same way, which is what you would want.
+  const inThread = pathname.startsWith("/messages/") && pathname.split("/").length > 2;
+  if (inThread) return null;
 
   return (
     <nav
       aria-label="Primary"
       className={cn(
-        "flex items-stretch gap-1 border-t border-line bg-surface px-2 pb-[env(safe-area-inset-bottom)]",
+        "fixed inset-x-0 bottom-0 lg:hidden",
+        "flex items-stretch gap-1 border-t border-line bg-surface px-2",
+        // The home indicator. `--safe-b` is zero everywhere it does not apply.
+        "pb-[var(--safe-b)]",
         "z-[var(--z-rail)]",
         className,
       )}

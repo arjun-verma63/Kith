@@ -287,8 +287,24 @@ export function DrawCanvas({ canDraw, send, subscribe, roundKey }: DrawCanvasPro
       </div>
 
       {canDraw ? (
+        /*
+         * The toolbar under the canvas.
+         *
+         * A 24px swatch is a comfortable target for a mouse and a bad one for a
+         * thumb — and it sits directly below a surface where a miss draws a
+         * line, which makes it the worst place in the app to be a few pixels
+         * short.
+         *
+         * The fix is `after:-inset-2.5`: an invisible pseudo-element extends
+         * each control's hit area to roughly 44px without changing what is
+         * drawn. Growing the swatches themselves would have made the row wrap on
+         * a phone and turned a tidy palette into two ragged lines.
+         *
+         * The gaps grow instead of the dots, so neighbouring hit areas do not
+         * overlap and steal each other's taps.
+         */
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-3 sm:gap-1.5">
             {PALETTE.map((swatch) => (
               <button
                 key={swatch}
@@ -297,7 +313,8 @@ export function DrawCanvas({ canDraw, send, subscribe, roundKey }: DrawCanvasPro
                 aria-label={`Colour ${swatch}`}
                 aria-pressed={colour === swatch}
                 className={cn(
-                  "control-focus size-6 rounded-full border transition-transform",
+                  "control-focus relative size-6 rounded-full border transition-transform",
+                  "after:absolute after:-inset-2.5 after:content-['']",
                   colour === swatch ? "scale-110 border-fg-loud" : "border-line hover:scale-105",
                 )}
                 style={{ backgroundColor: swatch }}
@@ -305,7 +322,7 @@ export function DrawCanvas({ canDraw, send, subscribe, roundKey }: DrawCanvasPro
             ))}
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-3 sm:gap-1.5">
             {BRUSH_SIZES.map((size) => (
               <button
                 key={size}
@@ -314,7 +331,8 @@ export function DrawCanvas({ canDraw, send, subscribe, roundKey }: DrawCanvasPro
                 aria-label={`Brush size ${size}`}
                 aria-pressed={width === size}
                 className={cn(
-                  "control-focus grid size-7 place-items-center rounded-full border",
+                  "control-focus relative grid size-7 place-items-center rounded-full border",
+                  "after:absolute after:-inset-2 after:content-['']",
                   width === size ? "border-ember bg-[var(--wash-accent)]" : "border-line",
                 )}
               >

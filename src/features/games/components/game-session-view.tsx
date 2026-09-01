@@ -59,7 +59,7 @@ export function GameSessionView({
   const isPlayer = session.mySeat !== null;
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-6 py-8 sm:px-10">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6 sm:px-10 sm:py-8">
       <Header session={session} view={view} connected={connected} />
 
       {session.status === "lobby" ? (

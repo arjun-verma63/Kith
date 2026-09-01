@@ -114,6 +114,21 @@
   --avatar-lg: 4.5rem; /* 72 — profile peek */
   --avatar-xl: 7rem; /* 112 — profile page */
 
+  /* ------------------------------------------------------------- MOBILE -- */
+  /* The home indicator on a modern iPhone, and its siblings. Zero on every other
+     device, so they can be added unconditionally — but only non-zero at all
+     because the root layout asks for `viewport-fit: cover`. */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+
+  /* What the chrome occupies, named so nothing has to guess. The message thread
+     sizes itself against the header, and a hard-coded `4rem` inside a calc() is
+     a number that quietly stops being true. */
+  --app-header-h: 3.5rem;
+  --nav-bar-h: calc(3.5rem + var(--safe-b));
+
   /* ------------------------------------------------------------- LAYERS -- */
   /* One z-index scale. A magic number in a component is a bug. */
   --z-base: 0;
@@ -121,6 +136,10 @@
   --z-sticky: 20;
   --z-rail: 30;
   --z-overlay: 40;
+  /* A full-screen, blocking surface: the incoming-call screen. Above the docked
+     call overlay, below a toast — you must still be able to read "microphone
+     blocked" while the phone is ringing. */
+  --z-modal: 50;
   --z-toast: 60;
   --z-grain: 9999;
 
@@ -351,4 +370,28 @@
   animation-iteration-count: 1 !important;
   transition-duration: 1ms !important;
   scroll-behavior: auto !important;
+}
+
+/* ============================================================ TOUCH TARGETS */
+/* A coarse pointer is a finger, and a finger is about 9mm across. 32px is a
+   comfortable target for a mouse and a frustrating one for a thumb, so the dense
+   control height grows to 44 — the WCAG 2.5.5 minimum — wherever the pointer is
+   coarse.
+
+   Done as a token rather than as a class on each button so that every existing
+   `size="sm"` control gets it without being hunted down and edited, and so a
+   button written next year gets it too. */
+@media (pointer: coarse) {
+  :root {
+    --control-sm: 2.75rem; /* 44 */
+  }
+}
+
+/* ================================================================== CHROME */
+/* From `lg` the bottom bar is not rendered and the header is taller. */
+@media (min-width: 64rem) {
+  :root {
+    --app-header-h: 4rem;
+    --nav-bar-h: 0px;
+  }
 }

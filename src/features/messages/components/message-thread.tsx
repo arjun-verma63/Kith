@@ -177,7 +177,7 @@ export function MessageThread({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <ol className="flex min-h-0 flex-1 flex-col-reverse gap-3 overflow-y-auto px-4 py-6 sm:px-6">
+      <ol className="flex min-h-0 flex-1 flex-col-reverse gap-3 overflow-y-auto overscroll-contain px-4 py-6 sm:px-6">
         {typingNames.length > 0 ? (
           <li className="flex items-center gap-2 pl-10 text-2xs text-fg-faint" aria-live="polite">
             <Pulse className="text-ember" />

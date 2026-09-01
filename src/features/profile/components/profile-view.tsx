@@ -61,7 +61,7 @@ export function ProfileView({
   const birthday = formatBirthday(profile.birthday);
 
   return (
-    <article className="mx-auto w-full max-w-3xl px-6 py-14 sm:px-10">
+    <article className="mx-auto w-full max-w-3xl px-5 py-8 sm:px-10 sm:py-14">
       <header className="flex flex-col gap-7 sm:flex-row sm:items-end sm:gap-9">
         <Avatar
           name={profile.display_name}

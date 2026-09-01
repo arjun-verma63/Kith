@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PresenceEmber } from "@/components/ui/presence-ember";
 import { useOnlineCount } from "@/components/presence/use-presence";
 import { usePresenceContext } from "@/components/presence/provider";
+import { cn } from "@/lib/utils/cn";
 
 /**
  * "3 in the room" — the third presence surface, and the one that stands in for
@@ -15,14 +16,17 @@ import { usePresenceContext } from "@/components/presence/provider";
  * confident lie, and showing the last known number would be the same lie with
  * better manners.
  */
-export function RoomCount({ friendIds }: { friendIds: string[] }) {
+export function RoomCount({ friendIds, className }: { friendIds: string[]; className?: string }) {
   const { connected } = usePresenceContext();
   const { online, known } = useOnlineCount(friendIds);
 
   return (
     <Link
       href="/friends"
-      className="control-focus link-grow flex items-center gap-2 rounded-edge text-sm text-fg-dim"
+      className={cn(
+        "control-focus link-grow flex items-center gap-2 rounded-edge text-sm text-fg-dim",
+        className,
+      )}
     >
       {known && connected ? (
         <>

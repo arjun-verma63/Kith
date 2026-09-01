@@ -47,7 +47,7 @@ export function ConversationList({ conversations }: { conversations: Conversatio
           className="py-14"
         />
       ) : (
-        <ul className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <ul className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
           {conversations.map((conversation) => (
             <ConversationRow
               key={conversation.id}

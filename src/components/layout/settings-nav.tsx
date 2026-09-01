@@ -54,7 +54,7 @@ export function SettingsNav() {
           keeps the first and last from touching the screen. */}
       <ul
         className={cn(
-          "-mx-6 flex gap-1 overflow-x-auto px-6 pb-px sm:-mx-10 sm:px-10",
+          "-mx-5 flex gap-1 overflow-x-auto px-5 pb-px sm:-mx-10 sm:px-10",
           "border-b border-line",
           "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
           "lg:mx-0 lg:flex-col lg:overflow-visible lg:border-b-0 lg:px-0",

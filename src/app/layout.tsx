@@ -53,6 +53,15 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   colorScheme: "dark light",
   themeColor: "#0e0b0a",
+  /*
+   * Lets the page reach under the notch and the home indicator, which is what
+   * makes `env(safe-area-inset-*)` report anything other than zero. Every piece
+   * of chrome that touches an edge then adds the inset back — see `--safe-b`.
+   *
+   * Without this the bottom navigation would sit above the home indicator on an
+   * iPhone with a strip of background under it, which looks like a bug.
+   */
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

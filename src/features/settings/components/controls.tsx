@@ -174,7 +174,9 @@ export function SaveBar({ label = "Save changes" }: { label?: string }) {
   return (
     <div
       className={cn(
-        "sticky bottom-0 z-10 -mx-4 flex items-center justify-end gap-3 px-4 py-3 sm:mx-0 sm:px-0",
+        "sticky z-10 -mx-4 flex items-center justify-end gap-3 px-4 py-3 sm:mx-0 sm:px-0",
+        // Above the bottom navigation, not behind it.
+        "bottom-[var(--nav-bar-h)] lg:bottom-0",
         "border-t border-line bg-[var(--surface)]/85 backdrop-blur-sm sm:border-0 sm:bg-transparent",
         "sm:backdrop-blur-none",
       )}

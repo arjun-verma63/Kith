@@ -47,7 +47,7 @@ export default async function GamesPage() {
   const past = sessions.filter((s) => s.status !== "lobby" && s.status !== "active");
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-10 sm:px-10">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-5 py-8 sm:gap-8 sm:px-10 sm:py-10">
       <header className="flex flex-col gap-1">
         <h1 className="heading text-d-xs text-fg-loud">Games</h1>
         <p className="text-sm text-fg-dim">Played here, with the people already in the room.</p>

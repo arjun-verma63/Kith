@@ -32,6 +32,7 @@
     "account:test": "node supabase/tests/account.test.mjs",
     "safety:test": "node supabase/tests/safety.test.mjs",
     "settings:test": "node supabase/tests/settings.test.mjs",
+    "mobile:test": "node supabase/tests/mobile.test.mjs",
     "profile:test": "node supabase/tests/profile.test.mjs",
     "friends:test": "node supabase/tests/friends.test.mjs",
     "presence:test": "node supabase/tests/presence.test.mjs",
@@ -49,7 +50,7 @@
     "howwell:test": "node supabase/tests/how-well.test.mjs",
     "guess:test": "node supabase/tests/guess-my-answer.test.mjs",
     "webrtc:test": "node supabase/tests/webrtc.test.mjs",
-    "test": "npm run db:test && npm run auth:test && npm run mfa:test && npm run account:test && npm run safety:test && npm run settings:test && npm run profile:test && npm run friends:test && npm run presence:test && npm run messages:test && npm run notifications:test && npm run webrtc:test && npm run calls:test && npm run call-session:test && npm run screen-share:test && npm run turn:test && npm run games:test && npm run wyr:test && npm run wkm:test && npm run draw:test && npm run couple:test && npm run howwell:test && npm run guess:test"
+    "test": "npm run db:test && npm run auth:test && npm run mfa:test && npm run account:test && npm run safety:test && npm run settings:test && npm run mobile:test && npm run profile:test && npm run friends:test && npm run presence:test && npm run messages:test && npm run notifications:test && npm run webrtc:test && npm run calls:test && npm run call-session:test && npm run screen-share:test && npm run turn:test && npm run games:test && npm run wyr:test && npm run wkm:test && npm run draw:test && npm run couple:test && npm run howwell:test && npm run guess:test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

@@ -15,10 +15,12 @@ import { countUnreadNotifications, listNotifications } from "@/features/notifica
 import { RoomCount } from "@/components/presence/room-count";
 import { PresenceHeartbeat } from "@/features/profile/components/presence-heartbeat";
 import { listFriends } from "@/features/friends/queries";
+import { NavBar } from "@/components/layout/nav-rail";
 import { AppearanceBoot } from "@/features/settings/components/appearance-boot";
 import { getAppearance } from "@/features/settings/queries";
 import { getOwnProfile } from "@/features/profile/queries";
 import type { DeclaredStatus } from "@/lib/presence";
+import { cn } from "@/lib/utils/cn";
 
 /**
  * Minimal shell for the signed-in surfaces that exist so far.
@@ -78,35 +80,64 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             whenever the socket is down. */}
           <PresenceHeartbeat />
 
-          <header className="border-b border-line">
-            <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between gap-4 px-6 sm:px-10">
+          {/* The header keeps identity and status; the destinations move to the
+              bottom bar below `lg`. See NavBar for why that is a different
+              component rather than a smaller row.
+
+              Sticky, because on a phone the page below it is long and the bell
+              is the one control people reach back up for. */}
+          <header
+            className={cn(
+              "sticky top-0 z-[var(--z-sticky)] border-b border-line",
+              "bg-[var(--surface)]/90 backdrop-blur-sm",
+              "pt-[var(--safe-t)]",
+            )}
+          >
+            <div
+              className={cn(
+                "mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 sm:px-10",
+                "h-[var(--app-header-h)]",
+              )}
+            >
               <Link href="/" className="control-focus flex items-center gap-2.5 rounded-edge">
                 <KithMark size={17} className="text-ember" />
                 <span className="display-wonk text-md text-fg-loud">KITH</span>
               </Link>
 
-              <div className="flex items-center gap-3">
-                <Link
-                  href="/messages"
-                  className="control-focus link-grow rounded-edge text-sm text-fg-dim"
-                >
-                  Messages
-                </Link>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="hidden items-center gap-3 lg:flex">
+                  <Link
+                    href="/messages"
+                    className="control-focus link-grow rounded-edge text-sm text-fg-dim"
+                  >
+                    Messages
+                  </Link>
 
-                <Link
-                  href="/calls"
-                  className="control-focus link-grow rounded-edge text-sm text-fg-dim"
-                >
-                  Calls
-                </Link>
+                  <Link
+                    href="/calls"
+                    className="control-focus link-grow rounded-edge text-sm text-fg-dim"
+                  >
+                    Calls
+                  </Link>
 
-                <Link
-                  href="/games"
-                  className="control-focus link-grow rounded-edge text-sm text-fg-dim"
-                >
-                  Games
-                </Link>
+                  <Link
+                    href="/games"
+                    className="control-focus link-grow rounded-edge text-sm text-fg-dim"
+                  >
+                    Games
+                  </Link>
 
+                  <Link
+                    href="/friends"
+                    className="control-focus link-grow rounded-edge text-sm text-fg-dim"
+                  >
+                    Friends
+                  </Link>
+                </div>
+
+                {/* Couple is not on the bottom bar — five items is what fits
+                    across 320px — so it stays here at every width, and only
+                    when there is something behind it. */}
                 {showCouple ? (
                   <Link
                     href="/couple"
@@ -116,7 +147,10 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
                   </Link>
                 ) : null}
 
-                <RoomCount friendIds={friends.map((friend) => friend.id)} />
+                <RoomCount
+                  friendIds={friends.map((friend) => friend.id)}
+                  className="hidden sm:flex"
+                />
 
                 <NotificationBell
                   userId={profile.id}
@@ -126,10 +160,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
                 <ThemeToggle className="hidden sm:inline-flex" />
 
-                {/* Settings → Security is where two-factor lives, so there has
-                    to be a way to reach settings that is not "edit your
-                    profile". Icon-only: the header is full and this is a
-                    destination people look for rather than notice. */}
+                {/* Settings is on the bottom bar and signing out is inside
+                    Settings → Account, so the header stops carrying either of
+                    them below `lg`. */}
                 <ButtonLink
                   href="/settings/profile"
                   variant="ghost"
@@ -137,13 +170,15 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
                   iconOnly
                   icon="settings"
                   aria-label="Settings"
+                  className="hidden lg:inline-flex"
                 />
 
                 <Link
                   href={`/u/${profile.username}`}
+                  aria-label="Your profile"
                   className="control-focus flex items-center gap-2 rounded-full"
                 >
-                  <span className="hidden text-sm text-fg-dim sm:inline">
+                  <span className="hidden text-sm text-fg-dim lg:inline">
                     {profile.display_name}
                   </span>
                   <Avatar
@@ -154,7 +189,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
                   />
                 </Link>
 
-                <form action={signOutAction}>
+                <form action={signOutAction} className="hidden lg:block">
                   <Button type="submit" variant="ghost" size="sm">
                     Sign out
                   </Button>
@@ -163,7 +198,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             </div>
           </header>
 
-          <main className="flex-1">{children}</main>
+          {/* The bar is fixed, so the page has to end above it rather than
+              behind it. `--nav-bar-h` is zero from `lg`, where there is no bar. */}
+          <main className="flex-1 pb-[var(--nav-bar-h)]">{children}</main>
+
+          <NavBar counts={{ messages: unread }} />
         </div>
       </CallProvider>
     </PresenceProvider>

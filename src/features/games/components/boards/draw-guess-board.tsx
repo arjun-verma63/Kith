@@ -286,7 +286,15 @@ function Chat({
   const canGuess = mySeat !== null && !amDrawer && !solved && !revealed;
 
   return (
-    <div className="panel flex h-full max-h-[26rem] min-h-56 flex-col rounded-soft lg:max-h-none">
+    /*
+     * Bounded, and more tightly on a phone.
+     *
+     * Below `lg` the canvas and the guesses are stacked, and 26rem of chat under
+     * a 4:3 canvas pushes the guess box off the bottom of a 667px screen — so
+     * you would be typing a guess at a drawing you cannot see. 14rem keeps both
+     * in view on the smallest phone the app targets.
+     */
+    <div className="panel flex h-full max-h-56 min-h-40 flex-col rounded-soft sm:max-h-[26rem] sm:min-h-56 lg:max-h-none">
       <div className="flex items-center justify-between border-b border-line px-3 py-2">
         <span className="label text-fg-faint">Guesses</span>
         <span className="flex -space-x-1.5">
@@ -305,7 +313,7 @@ function Chat({
         </span>
       </div>
 
-      <ul ref={list} className="flex-1 overflow-y-auto px-3 py-2">
+      <ul ref={list} className="flex-1 overflow-y-auto overscroll-contain px-3 py-2">
         {view.chat.length === 0 ? (
           <li className="py-4 text-center text-2xs text-fg-faint">Nothing yet.</li>
         ) : (

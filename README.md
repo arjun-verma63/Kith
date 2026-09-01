@@ -56,6 +56,7 @@ served from our own origin.
 | `npm run account:test`       | Deletion, sessions, privacy controls, what a page may show |
 | `npm run safety:test`        | Blocking across every surface, and reports                 |
 | `npm run settings:test`      | Every preference, and that each one changes something      |
+| `npm run mobile:test`        | Static mobile invariants — viewport units, layering, touch |
 | `npm run profile:test`       | Profile triggers, username rules, storage policies         |
 | `npm run friends:test`       | Requests, friendships, the constraints behind them         |
 | `npm run presence:test`      | The presence resolution rule and its channel policy        |
@@ -196,6 +197,13 @@ rather than dropping the row**: `profiles.id` cascades from `auth.users`, and tw
 of the onward edges are other people's data (every game they hosted, and the
 couple record with both partners' answers in it). One person leaving should not
 delete five other people's evenings.
+
+**[docs/MOBILE.md](docs/MOBILE.md)** is the mobile audit. The header carried ten
+items in one row, which does not fit a 375px screen — so the destinations moved
+to a bottom bar rather than being shrunk. It also turned up two live bugs: the
+incoming-call screen referenced a `--z-modal` token that was never defined, and
+nothing in the app handled safe areas. `npm run mobile:test` keeps the hazards
+from coming back; §8 is the manual pass it cannot replace.
 
 **[docs/SETTINGS.md](docs/SETTINGS.md)** covers the seven settings sections and
 the rule they are built on: every control does something. `user_settings` had

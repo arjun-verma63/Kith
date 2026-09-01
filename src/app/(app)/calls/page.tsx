@@ -18,7 +18,7 @@ export default async function CallsPage() {
   const calls = await listCallHistory();
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-10 sm:px-10">
+    <div className="mx-auto w-full max-w-2xl px-5 py-8 sm:px-10 sm:py-10">
       <header className="mb-2 flex flex-col gap-1">
         <h1 className="heading text-d-xs text-fg-loud">Calls</h1>
         <p className="text-sm text-fg-dim">Everyone you have spoken to, and everyone you missed.</p>

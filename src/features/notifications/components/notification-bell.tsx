@@ -145,7 +145,7 @@ export function NotificationBell({
         data-open={open}
         className={cn(
           "menu-panel panel panel-overlay absolute top-[calc(100%+0.5rem)] right-0",
-          "z-[var(--z-overlay)] w-[min(22rem,calc(100vw-2rem))] rounded-soft",
+          "z-[var(--z-overlay)] w-[min(22rem,calc(100dvw-1.5rem))] rounded-soft",
         )}
         style={{ "--menu-origin": "top right" } as React.CSSProperties}
       >
@@ -165,7 +165,7 @@ export function NotificationBell({
         {notifications.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-fg-faint">Nothing yet.</p>
         ) : (
-          <ul className="max-h-[26rem] overflow-y-auto">
+          <ul className="max-h-[min(26rem,60dvh)] overflow-y-auto overscroll-contain">
             {notifications.map((notification) => (
               <NotificationRow
                 key={notification.id}

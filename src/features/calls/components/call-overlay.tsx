@@ -241,7 +241,10 @@ function ConnectedBar() {
       role="region"
       aria-label={`Call with ${name}`}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-[var(--z-overlay)] sm:inset-x-auto sm:right-6 sm:bottom-6",
+        "fixed inset-x-0 z-[var(--z-overlay)] sm:inset-x-auto sm:right-6 sm:bottom-6",
+        // Docked above the bottom navigation rather than on top of it, so the
+        // call does not cover the way out of the call. Zero from `lg`.
+        "bottom-[var(--nav-bar-h)] sm:bottom-6",
         "transition-[width] duration-[var(--t-settle)]",
         showing ? "sm:w-[30rem]" : "sm:w-[22rem]",
       )}
@@ -602,7 +605,14 @@ function CallError({ message, onDismiss }: { message: string; onDismiss: () => v
   return (
     <div
       role="status"
-      className="fixed inset-x-0 bottom-6 z-[var(--z-toast)] mx-auto w-fit max-w-[calc(100vw-2rem)]"
+      className={cn(
+        "fixed inset-x-0 z-[var(--z-toast)] mx-auto w-fit",
+        // `dvw` rather than `vw`: on a phone with a visible scrollbar gutter
+        // `100vw` is wider than the viewport, which pushes a centred toast
+        // off-centre and can introduce a horizontal scroll.
+        "max-w-[calc(100dvw-2rem)]",
+        "bottom-[calc(var(--nav-bar-h)+1.5rem)] sm:bottom-6",
+      )}
     >
       <div className="panel panel-overlay flex items-center gap-3 rounded-soft px-4 py-3">
         <Icon name="alert" size={15} className="shrink-0 text-signal" />

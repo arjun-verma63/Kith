@@ -201,6 +201,22 @@
     color: var(--fg-faint);
   }
 
+  /* iOS Safari zooms the viewport when a field smaller than 16px takes focus,
+     and does not zoom back out. The base size is 15px, which is right for the
+     type scale and one pixel short of avoiding that — so on a touch device the
+     fields grow to 16 and the page stays where it was put.
+
+     Scoped to `pointer: coarse` so the desktop scale is untouched. A phone with
+     a mouse attached would keep 15px, which is the correct trade in the one case
+     it applies. */
+  @media (pointer: coarse) {
+    .input,
+    textarea.input,
+    select {
+      font-size: 1rem;
+    }
+  }
+
   .input:hover:not(:disabled, :focus) {
     border-color: var(--line-lit);
   }
@@ -279,9 +295,62 @@
     padding: 0;
     border: none;
     background: transparent;
-    max-width: min(100vw - 2rem, var(--dialog-w, 34rem));
+    max-width: min(100dvw - 2rem, var(--dialog-w, 34rem));
     max-height: calc(100dvh - 2rem);
     overflow: visible;
+  }
+
+  /* ------------------------------------------------------------ THE SHEET --
+     Below `sm` a dialog becomes a bottom sheet.
+
+     Not a style preference. A centred modal on a phone is fine until it holds a
+     text field: the software keyboard takes the bottom half of the screen, the
+     dialog stays centred in what is left, and the field somebody is typing into
+     ends up behind the keyboard. Anchoring to the bottom means the keyboard
+     pushes the sheet up instead of covering it — which is why every mobile OS
+     presents this shape and none of them present a floating box.
+
+     It also puts the controls within reach of a thumb rather than in the middle
+     of the screen, and it gives the dismiss gesture somewhere to go.
+
+     `margin-top: auto` inside the dialog's own box is what does the anchoring;
+     the `m-auto` on the element is overridden here rather than in the component,
+     so the JSX stays one element for both shapes. */
+  @media (max-width: 39.999rem) {
+    .dialog {
+      max-width: 100dvw;
+      max-height: 100dvh;
+      width: 100%;
+      margin: auto auto 0;
+    }
+
+    .dialog .dialog-panel {
+      /* Square at the bottom: the sheet is attached to the edge, not floating
+         above it, and rounding all four corners would deny that. */
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      max-height: calc(100dvh - 2.5rem);
+      /* Clears the home indicator, and gives a thumb somewhere to rest that is
+         not a button. */
+      padding-bottom: var(--safe-b);
+    }
+
+    /* The sheet rises rather than fading in place. Same duration and easing as
+       the dialog it replaces, so a person who switches orientation mid-session
+       does not get two different animations for the same control. */
+    .dialog .dialog-panel {
+      transform: translateY(1.5rem) scale(1);
+    }
+
+    .dialog[open] .dialog-panel {
+      transform: translateY(0) scale(1);
+    }
+
+    @starting-style {
+      .dialog[open] .dialog-panel {
+        transform: translateY(1.5rem) scale(1);
+      }
+    }
   }
 
   .dialog::backdrop {
