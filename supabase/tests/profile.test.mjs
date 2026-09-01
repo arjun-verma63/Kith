@@ -257,17 +257,14 @@ eq("the owner can read their avatar object", mine.rows.length, 1);
 const theirs = await asUser(db, rafa, "select name from storage.objects where bucket_id='avatars'");
 eq("another member can read it too", theirs.rows.length, 1);
 
-await asUser(db, rafa, "insert into public.blocks (blocker_id, blocked_id) values ($1,$2)", [
-  rafa,
-  ada,
-]);
+await asUser(db, rafa, "select public.block_user($1)", [ada]);
 const blocked = await asUser(
   db,
   rafa,
   "select name from storage.objects where bucket_id='avatars'",
 );
 eq("a blocked person's avatar is NOT readable", blocked.rows.length, 0);
-await asService(db, "delete from public.blocks where blocker_id=$1", [rafa]);
+await asUser(db, rafa, "select public.unblock_user($1)", [ada]);
 
 try {
   await asUser(db, rafa, "insert into storage.objects (bucket_id, name) values ('avatars', $1)", [

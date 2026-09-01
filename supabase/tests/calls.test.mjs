@@ -508,10 +508,7 @@ await denied(
 section("Blocks");
 
 {
-  await asService(db, "insert into public.blocks (blocker_id, blocked_id) values ($1, $2)", [
-    rafa,
-    wren,
-  ]);
+  await asUser(db, rafa, "select public.block_user($1)", [wren]);
   await asService(db, "insert into public.friendships (user_low, user_high) values ($1, $2)", [
     ada < wren ? ada : wren,
     ada < wren ? wren : ada,

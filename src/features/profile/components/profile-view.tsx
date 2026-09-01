@@ -34,12 +34,19 @@ export interface ProfileExtras {
   coupleMarker?: React.ReactNode;
   /** "Ask to pair", only when the database says it would be permitted. */
   proposeAction?: React.ReactNode;
+  /**
+   * Block and report. Absent on your own profile and present on every other one
+   * — unlike the two above, this is not conditional on a relationship, because
+   * the moment somebody needs it is the moment they have no relationship left.
+   */
+  safetyAction?: React.ReactNode;
 }
 
 export function ProfileView({
   profile,
   coupleMarker,
   proposeAction,
+  safetyAction,
 }: { profile: Profile } & ProfileExtras) {
   const status = profile.status as DeclaredStatus;
   // The avatar ring uses the server-rendered fallback so the page has a sensible
@@ -108,11 +115,16 @@ export function ProfileView({
             Edit your profile
           </ButtonLink>
         </div>
-      ) : proposeAction ? (
-        // Last on the page and quiet, because it is the rarest thing anybody
-        // wants to do here and should not compete with the rest of the profile.
-        <div className="mt-10 border-t border-line pt-6">{proposeAction}</div>
-      ) : null}
+      ) : (
+        <div className="mt-10 flex flex-col gap-6 border-t border-line pt-6">
+          {/* Last on the page and quiet, because these are the rarest things
+              anybody wants to do here and should not compete with the rest of
+              the profile. Safety sits below the invitation, in the same tone as
+              it: findable without a search, and not shouting. */}
+          {proposeAction}
+          {safetyAction}
+        </div>
+      )}
     </article>
   );
 }

@@ -6,6 +6,8 @@ import { ProposeButton } from "@/features/couple/components/propose-button";
 import { canProposeTo, coupleMarkerFor } from "@/features/couple/queries";
 import { ProfileView } from "@/features/profile/components/profile-view";
 import { getProfileByUsername } from "@/features/profile/queries";
+import { SafetyMenu } from "@/features/safety/components/safety-menu";
+import { hasBlocked } from "@/features/safety/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -32,9 +34,18 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
    * this page looks exactly as it did before couple mode existed — which is the
    * point of it being optional.
    */
-  const [marker, mayPropose] = await Promise.all([
+  const [marker, mayPropose, blocked] = await Promise.all([
     coupleMarkerFor(profile.id),
     profile.isOwn ? Promise.resolve(false) : canProposeTo(profile.id),
+    /*
+     * Read on the server so the button says the right word on first paint.
+     *
+     * Only reachable at all when the profile came back, and `profiles_select`
+     * hides a blocked person in both directions — so in practice this is false
+     * every time it is asked. It is here for the one case where it is not: you
+     * blocked them and then navigated straight to the URL you already had.
+     */
+    profile.isOwn ? Promise.resolve(false) : hasBlocked(profile.id),
   ]);
 
   return (
@@ -56,6 +67,17 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
             proposeAction: <ProposeButton userId={profile.id} displayName={profile.display_name} />,
           }
         : {})}
+      {...(profile.isOwn
+        ? {}
+        : {
+            safetyAction: (
+              <SafetyMenu
+                userId={profile.id}
+                displayName={profile.display_name}
+                blocked={blocked}
+              />
+            ),
+          })}
     />
   );
 }

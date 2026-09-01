@@ -54,6 +54,7 @@ served from our own origin.
 | `npm run auth:test`          | Redirect rules, validation, invite redemption              |
 | `npm run mfa:test`           | Two-factor: the data-layer gate, routing, RFC 6238         |
 | `npm run account:test`       | Deletion, sessions, privacy controls, what a page may show |
+| `npm run safety:test`        | Blocking across every surface, and reports                 |
 | `npm run profile:test`       | Profile triggers, username rules, storage policies         |
 | `npm run friends:test`       | Requests, friendships, the constraints behind them         |
 | `npm run presence:test`      | The presence resolution rule and its channel policy        |
@@ -194,6 +195,13 @@ rather than dropping the row**: `profiles.id` cascades from `auth.users`, and tw
 of the onward edges are other people's data (every game they hosted, and the
 couple record with both partners' answers in it). One person leaving should not
 delete five other people's evenings.
+
+**[docs/SAFETY.md](docs/SAFETY.md)** covers blocking and reporting. The part
+worth reading is the audit: blocking had been checked in nine places since
+migration 0002 and **missed in three** — games, the friends list, and message
+bodies. All three had the same cause, which is that a block was a row other
+checks consulted rather than something that ended a relationship. It now severs
+the friendship, pending requests, an active couple, a live call and a game seat.
 
 **[docs/SUPABASE.md](docs/SUPABASE.md) and [docs/TURN.md](docs/TURN.md) are the credential maps** — what each key can do,
 where it belongs per environment, and what to do if one leaks.

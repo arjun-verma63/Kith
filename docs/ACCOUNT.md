@@ -151,6 +151,8 @@ may do:
 | Who can call you                    | `can_call_conversation` (new in 0025) |
 | Who can ask you to be their partner | `can_propose_to`                      |
 
+Blocking is next door — see [SAFETY.md](SAFETY.md).
+
 `who_can_call` had existed as a column since migration 0002 and **nothing read
 it** — the same state `who_can_message` was in before 0014. A control that
 controls nothing is worse than no control: it is a promise on a settings page

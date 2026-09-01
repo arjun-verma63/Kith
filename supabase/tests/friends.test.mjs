@@ -208,12 +208,9 @@ try {
 }
 
 // Blocked people cannot reach each other.
-await asUser(db, theo, "insert into public.blocks (blocker_id, blocked_id) values ($1,$2)", [
-  theo,
-  ada,
-]);
+await asUser(db, theo, "select public.block_user($1)", [ada]);
 await rejects("a blocked person cannot send a request", request(ada, theo), /row-level security/i);
-await asService(db, "delete from public.blocks where blocker_id=$1", [theo]);
+await asUser(db, theo, "select public.unblock_user($1)", [ada]);
 
 // Unfriending is symmetric.
 const removed = await asUser(
@@ -331,15 +328,12 @@ const foundByFriend = await asUser(db, nour, "select * from public.search_profil
 eq("...but still findable by an existing friend", foundByFriend.rows.length, 1);
 
 // Blocks.
-await asUser(db, rafa, "insert into public.blocks (blocker_id, blocked_id) values ($1,$2)", [
-  rafa,
-  nour,
-]);
+await asUser(db, rafa, "select public.block_user($1)", [nour]);
 const blockedSearch = await asUser(db, nour, "select * from public.search_profiles('rafa')");
 eq("a blocked person is absent from search entirely", blockedSearch.rows.length, 0);
 const reverse = await asUser(db, rafa, "select * from public.search_profiles('nour')");
 eq("  symmetrically, in both directions", reverse.rows.length, 0);
-await asService(db, "delete from public.blocks where blocker_id=$1", [rafa]);
+await asUser(db, rafa, "select public.unblock_user($1)", [nour]);
 
 // Invisible must not leak a heartbeat through search.
 await asUser(db, rafa, "update public.profiles set status='invisible' where id=$1", [rafa]);

@@ -658,6 +658,51 @@ export type Database = {
         };
         Relationships: [];
       };
+      reports: {
+        Row: {
+          id: string;
+          reporter_id: string;
+          reported_id: string;
+          reason: Database["public"]["Enums"]["report_reason"];
+          detail: string | null;
+          message_id: string | null;
+          conversation_id: string | null;
+          status: Database["public"]["Enums"]["report_status"];
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          moderator_note: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          reporter_id: string;
+          reported_id: string;
+          reason: Database["public"]["Enums"]["report_reason"];
+          detail?: string | null;
+          message_id?: string | null;
+          conversation_id?: string | null;
+          status?: Database["public"]["Enums"]["report_status"];
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          moderator_note?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          reporter_id?: string;
+          reported_id?: string;
+          reason?: Database["public"]["Enums"]["report_reason"];
+          detail?: string | null;
+          message_id?: string | null;
+          conversation_id?: string | null;
+          status?: Database["public"]["Enums"]["report_status"];
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          moderator_note?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       security_events: {
         Row: {
           id: string;
@@ -757,6 +802,13 @@ export type Database = {
           other_user: string;
         };
         Returns: boolean;
+      };
+      block_user: {
+        Args: {
+          p_user_id: string;
+          p_reason?: string | null;
+        };
+        Returns: undefined;
       };
       broadcast_call: {
         Args: {
@@ -1009,6 +1061,17 @@ export type Database = {
           p_session_id: string;
         };
         Returns: undefined;
+      };
+      list_blocked: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+            id: string | null;
+            username: string | null;
+            display_name: string | null;
+            avatar_path: string | null;
+            reason: string | null;
+            blocked_at: string | null;
+        }[];
       };
       list_calls: {
         Args: {
@@ -1301,6 +1364,16 @@ export type Database = {
         };
         Returns: undefined;
       };
+      report_user: {
+        Args: {
+          p_reported_id: string;
+          p_reason: Database["public"]["Enums"]["report_reason"];
+          p_detail?: string | null;
+          p_message_id?: string | null;
+          p_conversation_id?: string | null;
+        };
+        Returns: string;
+      };
       respond_to_couple: {
         Args: {
           p_couple_id: string;
@@ -1399,6 +1472,12 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: undefined;
       };
+      unblock_user: {
+        Args: {
+          p_user_id: string;
+        };
+        Returns: undefined;
+      };
     };
     Enums: {
       call_end_reason: "hung_up" | "declined" | "missed" | "failed" | "cancelled" | "expired";
@@ -1418,6 +1497,8 @@ export type Database = {
       permission_scope: "everyone" | "friends" | "nobody";
       presence_status: "auto" | "active" | "away" | "busy" | "invisible";
       profile_accent: "ember" | "lantern" | "moss" | "signal" | "plum" | "ice";
+      report_reason: "harassment" | "threats" | "spam" | "impersonation" | "inappropriate_content" | "other";
+      report_status: "open" | "reviewing" | "actioned" | "dismissed";
       theme_preference: "dusk" | "daylight" | "system";
     };
     CompositeTypes: { [_ in never]: never };

@@ -111,11 +111,9 @@ console.log(
 /* ========================================================================== */
 section("profiles & blocks");
 
-// Ada blocks Theo.
-await asUser(db, ada, "insert into public.blocks (blocker_id, blocked_id) values ($1, $2)", [
-  ada,
-  theo,
-]);
+// Ada blocks Theo. Through the function: migration 0026 dropped the direct
+// insert policy, because a block that skips the severing is a half-block.
+await asUser(db, ada, "select public.block_user($1)", [theo]);
 
 await expectRows(
   "a member sees other members' profiles",
@@ -142,11 +140,16 @@ await expectRows(
 );
 
 await expectDenied(
-  "you cannot block on somebody else's behalf",
+  "there is no direct way to write a block, on anybody's behalf",
   asUser(db, rafa, "insert into public.blocks (blocker_id, blocked_id) values ($1, $2)", [
-    ada,
+    rafa,
     nour,
   ]),
+);
+
+await expectDenied(
+  "nor to delete one",
+  asUser(db, ada, "delete from public.blocks where blocker_id = $1", [ada]),
 );
 
 await expectDenied(
@@ -380,10 +383,7 @@ await expectDenied(
 );
 
 // Now block across an existing conversation.
-await asUser(db, rafa, "insert into public.blocks (blocker_id, blocked_id) values ($1, $2)", [
-  rafa,
-  ada,
-]);
+await asUser(db, rafa, "select public.block_user($1)", [ada]);
 
 await expectDenied(
   "a member BLOCKED by another member can no longer post",
@@ -395,10 +395,7 @@ await expectDenied(
   ),
 );
 
-await asService(db, "delete from public.blocks where blocker_id = $1 and blocked_id = $2", [
-  rafa,
-  ada,
-]);
+await asUser(db, rafa, "select public.unblock_user($1)", [ada]);
 
 await expectAllowed(
   "unblocking restores posting",

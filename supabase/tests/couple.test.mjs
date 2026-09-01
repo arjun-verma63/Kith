@@ -175,13 +175,28 @@ section("Who may be asked");
     [rafa],
   );
 
-  // Blocking.
-  await asService(db, "insert into public.blocks (blocker_id, blocked_id) values ($1, $2)", [
-    nour,
-    ada,
-  ]);
+  // Blocking. Through the function, so this is a real block rather than a row —
+  // which means it also severs the friendship, and unblocking does not put it
+  // back. That is the documented behaviour (migration 0026), so the fixture has
+  // to restore it the way a person would: by becoming friends again.
+  await asUser(db, nour, "select public.block_user($1)", [ada]);
   eq("somebody who blocked you cannot be asked", await canPropose(ada, nour), false);
-  await asService(db, "delete from public.blocks where blocker_id = $1", [nour]);
+
+  const { rows: severed } = await asService(
+    db,
+    "select count(*)::int n from public.friendships where user_low = $1 and user_high = $2",
+    [ada < nour ? ada : nour, ada < nour ? nour : ada],
+  );
+  eq("  and the block took the friendship with it", severed[0].n, 0);
+
+  await asUser(db, nour, "select public.unblock_user($1)", [ada]);
+  eq("  unblocking does not restore it", await canPropose(ada, nour), false);
+
+  await asService(db, "insert into public.friendships (user_low, user_high) values ($1, $2)", [
+    ada < nour ? ada : nour,
+    ada < nour ? nour : ada,
+  ]);
+  eq("  becoming friends again does", await canPropose(ada, nour), true);
 }
 
 /* ==========================================================================

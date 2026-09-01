@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils/cn";
 const SECTIONS = [
   { href: "/settings/profile", label: "Profile" },
   { href: "/settings/security", label: "Security" },
+  { href: "/settings/safety", label: "Safety" },
 ] as const;
 
 export function SettingsNav() {
