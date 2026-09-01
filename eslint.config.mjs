@@ -17,6 +17,7 @@ const noDeepRelative = {
 const FEATURE_SLICES = [
   "auth",
   "calls",
+  "couple",
   "friends",
   "games",
   "landing",

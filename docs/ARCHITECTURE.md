@@ -190,6 +190,19 @@ failed → closed`) — ad-hoc booleans are how call features rot. `disconnected
 `reconnecting` with a grace period rather than to failure: it is routinely transient, and
 treating it as fatal would end good calls on every network handover.
 
+## 7b. Couple
+
+> Implemented. **[COUPLE.md](COUPLE.md) is the detailed reference.**
+
+An optional, private feature for two people who are already friends. It is
+deliberately invisible: private by default, no discovery of any kind, and a
+navigation link that only exists when there is something behind it. You may only
+propose to a friend, and no setting can widen that.
+
+The daily question is the one mechanic in KITH enforced entirely by a Row Level
+Security policy — neither partner can read the other's answer until they have
+written their own, and the row genuinely does not leave the database.
+
 ## 8. Games
 
 > Architecture implemented, with **Would You Rather**, **Who Knows Me Better?** and

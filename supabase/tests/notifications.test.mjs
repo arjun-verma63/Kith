@@ -202,18 +202,13 @@ await asUser(db, ada, "select public.create_game_session($1, 'trivia-night')", [
 eq("starting a game invites the other members", await countFor(db, rafa, "game_invite"), 1);
 eq("  and not the host", await countFor(db, ada, "game_invite"), 0);
 
-const pair = [ada, rafa].sort();
-const { rows: couple } = await asUser(
-  db,
-  ada,
-  `insert into public.couples (user_low, user_high, proposed_by, status)
-   values ($1,$2,$3,'pending') returning id`,
-  [pair[0], pair[1], ada],
-);
+// Through the RPCs, because migration 0021 revoked direct writes on `couples` —
+// the lifecycle is a state machine and this test predates it.
+const { rows: couple } = await asUser(db, ada, "select public.propose_couple($1) as id", [rafa]);
 eq("a couple proposal notifies the other person", await countFor(db, rafa, "couple_request"), 1);
 eq("  and not the proposer", await countFor(db, ada, "couple_request"), 0);
 
-await asUser(db, rafa, "update public.couples set status='active' where id=$1", [couple[0].id]);
+await asUser(db, rafa, "select public.respond_to_couple($1, true)", [couple[0].id]);
 eq("accepting notifies the proposer", await countFor(db, ada, "couple_request"), 1);
 
 /* ========================================================================== */

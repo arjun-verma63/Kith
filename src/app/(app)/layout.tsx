@@ -8,6 +8,7 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { signOutAction } from "@/features/auth/actions";
 import { CallProvider } from "@/features/calls/call-provider";
 import { getActiveCall } from "@/features/calls/queries";
+import { getMyCouple, listInvitations } from "@/features/couple/queries";
 import { PresenceProvider } from "@/components/presence/provider";
 import { NotificationBell } from "@/features/notifications/components/notification-bell";
 import { countUnreadNotifications, listNotifications } from "@/features/notifications/queries";
@@ -39,14 +40,28 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   // directory of everyone who happens to hold an account.
   // Fetched in parallel: three reads with nothing to say to each other should
   // not cost three sequential round trips on every page in the app.
-  const [friends, notifications, unread, activeCall] = await Promise.all([
-    listFriends(),
-    listNotifications(),
-    countUnreadNotifications(),
-    // Server-rendered so a refresh mid-call comes back to the call rather than
-    // quietly abandoning the other person.
-    getActiveCall(),
-  ]);
+  const [friends, notifications, unread, activeCall, couple, coupleInvitations] = await Promise.all(
+    [
+      listFriends(),
+      listNotifications(),
+      countUnreadNotifications(),
+      // Server-rendered so a refresh mid-call comes back to the call rather than
+      // quietly abandoning the other person.
+      getActiveCall(),
+      getMyCouple(),
+      listInvitations(),
+    ],
+  );
+
+  /*
+   * Couple mode is optional and stays out of the way.
+   *
+   * The link appears only when there is something behind it — a partner, or a
+   * question waiting. For everybody else KITH looks exactly as it did before
+   * the feature existed, which is the difference between an optional feature and
+   * a product that has quietly become a dating app.
+   */
+  const showCouple = couple !== null || coupleInvitations.length > 0;
 
   return (
     <PresenceProvider userId={profile.id} status={profile.status as DeclaredStatus}>
@@ -86,6 +101,15 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
                 >
                   Games
                 </Link>
+
+                {showCouple ? (
+                  <Link
+                    href="/couple"
+                    className="control-focus link-grow rounded-edge text-sm text-fg-dim"
+                  >
+                    Couple
+                  </Link>
+                ) : null}
 
                 <RoomCount friendIds={friends.map((friend) => friend.id)} />
 

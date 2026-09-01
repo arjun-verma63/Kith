@@ -21,7 +21,26 @@ import type { ProfileView as Profile } from "@/features/profile/queries";
  * card with a 96px circle on top of it, which is the layout every profile page
  * defaults to.
  */
-export function ProfileView({ profile }: { profile: Profile }) {
+/**
+ * Optional couple pieces, passed in rather than fetched.
+ *
+ * A feature may not import another feature, and this one has no business knowing
+ * the couple slice exists. The page composes them; this just leaves room. Both
+ * are usually absent — a couple is private by default and most profiles are not
+ * a friend's.
+ */
+export interface ProfileExtras {
+  /** A quiet marker, only when the couple chose to show it and you are a friend. */
+  coupleMarker?: React.ReactNode;
+  /** "Ask to pair", only when the database says it would be permitted. */
+  proposeAction?: React.ReactNode;
+}
+
+export function ProfileView({
+  profile,
+  coupleMarker,
+  proposeAction,
+}: { profile: Profile } & ProfileExtras) {
   const status = profile.status as DeclaredStatus;
   // The avatar ring uses the server-rendered fallback so the page has a sensible
   // first paint; the label below it is a client component that follows the live
@@ -80,6 +99,7 @@ export function ProfileView({ profile }: { profile: Profile }) {
       <dl className="mt-12 flex flex-col border-t border-line">
         <Fact label="In the room since" value={formatJoined(profile.created_at)} icon="home" />
         {birthday ? <Fact label="Birthday" value={birthday} icon="couple" /> : null}
+        {coupleMarker}
       </dl>
 
       {profile.isOwn ? (
@@ -88,6 +108,10 @@ export function ProfileView({ profile }: { profile: Profile }) {
             Edit your profile
           </ButtonLink>
         </div>
+      ) : proposeAction ? (
+        // Last on the page and quiet, because it is the rarest thing anybody
+        // wants to do here and should not compete with the rest of the profile.
+        <div className="mt-10 border-t border-line pt-6">{proposeAction}</div>
       ) : null}
     </article>
   );

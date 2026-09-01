@@ -824,8 +824,19 @@ await expectEmpty(
   (r) => r.proname,
 );
 
-// An unindexed foreign key turns every parent delete into a sequential scan of
-// the child, and is the usual cause of a cascade that mysteriously takes minutes.
+/*
+ * An unindexed foreign key turns every parent delete into a sequential scan of
+ * the child, and is the usual cause of a cascade that mysteriously takes
+ * minutes.
+ *
+ * The check used to be `conkey <@ indkey` — are the columns present anywhere in
+ * an index — and that passed for the wrong reason for a long time. A btree can
+ * only serve a lookup that starts at its leading column, so an index on
+ * `(user_low, user_high)` "covered" a foreign key on `user_high` while being no
+ * use for it whatsoever. Three real gaps were hiding behind it.
+ *
+ * The columns must be a PREFIX of the index, which is what "covered" means.
+ */
 await expectEmpty(
   "every foreign key is covered by an index",
   `select conrelid::regclass::text as tbl, conname
@@ -835,7 +846,8 @@ await expectEmpty(
       and not exists (
         select 1 from pg_index i
         where i.indrelid = c.conrelid
-          and (c.conkey::smallint[]) <@ (i.indkey::smallint[])
+          and (i.indkey::int2[])[0:array_length(c.conkey, 1) - 1]
+              operator(pg_catalog.=) c.conkey
       )`,
   (r) => `${r.tbl}.${r.conname}`,
 );

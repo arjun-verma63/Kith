@@ -225,6 +225,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
           ended_at: string | null;
+          visibility: Database["public"]["Enums"]["couple_visibility"];
         };
         Insert: {
           id?: string;
@@ -236,6 +237,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           ended_at?: string | null;
+          visibility?: Database["public"]["Enums"]["couple_visibility"];
         };
         Update: {
           id?: string;
@@ -247,6 +249,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           ended_at?: string | null;
+          visibility?: Database["public"]["Enums"]["couple_visibility"];
         };
         Relationships: [];
       };
@@ -695,6 +698,7 @@ export type Database = {
           notification_prefs: Json;
           created_at: string;
           updated_at: string;
+          who_can_propose: Database["public"]["Enums"]["permission_scope"];
         };
         Insert: {
           user_id: string;
@@ -708,6 +712,7 @@ export type Database = {
           notification_prefs?: Json;
           created_at?: string;
           updated_at?: string;
+          who_can_propose?: Database["public"]["Enums"]["permission_scope"];
         };
         Update: {
           user_id?: string;
@@ -721,6 +726,7 @@ export type Database = {
           notification_prefs?: Json;
           created_at?: string;
           updated_at?: string;
+          who_can_propose?: Database["public"]["Enums"]["permission_scope"];
         };
         Relationships: [];
       };
@@ -778,6 +784,12 @@ export type Database = {
         };
         Returns: boolean;
       };
+      can_propose_to: {
+        Args: {
+          other_user: string;
+        };
+        Returns: boolean;
+      };
       can_start_game: {
         Args: {
           p_session_id: string;
@@ -809,6 +821,17 @@ export type Database = {
         };
         Returns: string;
       };
+      couple_marker: {
+        Args: {
+          target_user: string;
+        };
+        Returns: {
+            partner_id: string | null;
+            partner_username: string | null;
+            partner_display_name: string | null;
+            anniversary: string | null;
+        }[];
+      };
       create_game_session: {
         Args: {
           p_conversation_id: string;
@@ -822,6 +845,12 @@ export type Database = {
         Args: {
           p_call_id: string;
           p_reason?: Database["public"]["Enums"]["call_end_reason"] | null;
+        };
+        Returns: undefined;
+      };
+      end_couple: {
+        Args: {
+          p_couple_id: string;
         };
         Returns: undefined;
       };
@@ -876,6 +905,23 @@ export type Database = {
             ended_at: string | null;
             my_seat: number | null;
             can_start: boolean | null;
+        }[];
+      };
+      get_my_couple: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+            id: string | null;
+            partner_id: string | null;
+            partner_username: string | null;
+            partner_display_name: string | null;
+            partner_avatar_path: string | null;
+            partner_status: Database["public"]["Enums"]["presence_status"] | null;
+            partner_last_seen_at: string | null;
+            status: Database["public"]["Enums"]["couple_status"] | null;
+            visibility: Database["public"]["Enums"]["couple_visibility"] | null;
+            anniversary: string | null;
+            started_at: string | null;
+            prompt_count: number | null;
         }[];
       };
       has_answered_prompt: {
@@ -981,6 +1027,33 @@ export type Database = {
             other_avatar_path: string | null;
             other_status: Database["public"]["Enums"]["presence_status"] | null;
             other_last_seen_at: string | null;
+        }[];
+      };
+      list_couple_invitations: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+            id: string | null;
+            direction: string | null;
+            other_id: string | null;
+            other_username: string | null;
+            other_display_name: string | null;
+            other_avatar_path: string | null;
+            created_at: string | null;
+        }[];
+      };
+      list_couple_prompts: {
+        Args: {
+          p_couple_id: string;
+          p_limit?: number | null;
+        };
+        Returns: {
+            id: string | null;
+            prompt_date: string | null;
+            question: string | null;
+            my_answer: string | null;
+            partner_answer: string | null;
+            partner_has_answered: boolean | null;
+            created_at: string | null;
         }[];
       };
       list_friend_requests: {
@@ -1136,6 +1209,25 @@ export type Database = {
         };
         Returns: number;
       };
+      open_couple_prompt: {
+        Args: {
+          p_couple_id: string;
+          p_question: string;
+        };
+        Returns: string;
+      };
+      partner_answered_prompt: {
+        Args: {
+          target_prompt: string;
+        };
+        Returns: boolean;
+      };
+      propose_couple: {
+        Args: {
+          other_user: string;
+        };
+        Returns: string;
+      };
       prune_notifications: {
         Args: Record<PropertyKey, never>;
         Returns: number;
@@ -1152,6 +1244,13 @@ export type Database = {
           p_invite_id: string;
         };
         Returns: undefined;
+      };
+      respond_to_couple: {
+        Args: {
+          p_couple_id: string;
+          p_accept: boolean;
+        };
+        Returns: Database["public"]["Enums"]["couple_status"];
       };
       ring_timeout: {
         Args: Record<PropertyKey, never>;
@@ -1179,6 +1278,14 @@ export type Database = {
         Args: {
           p_call_id: string;
           p_state: Json;
+        };
+        Returns: undefined;
+      };
+      set_couple_details: {
+        Args: {
+          p_couple_id: string;
+          p_anniversary?: string | null;
+          p_visibility?: Database["public"]["Enums"]["couple_visibility"] | null;
         };
         Returns: undefined;
       };
@@ -1243,6 +1350,7 @@ export type Database = {
       call_status: "ringing" | "active" | "ended" | "missed" | "declined";
       conversation_kind: "dm" | "group";
       couple_status: "pending" | "active" | "ended";
+      couple_visibility: "private" | "friends";
       friend_request_status: "pending" | "accepted" | "declined" | "cancelled";
       game_audience: "group" | "couple";
       game_pace: "turn_based" | "realtime";

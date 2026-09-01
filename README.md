@@ -65,6 +65,7 @@ served from our own origin.
 | `npm run wyr:test`           | Would You Rather: secrecy, scoring, people leaving        |
 | `npm run wkm:test`           | Who Knows Me Better?: two secrets, rotation, voids        |
 | `npm run draw:test`          | Draw & Guess, and the canvas wire protocol                |
+| `npm run couple:test`        | Couple mode: privacy, consent, the reveal gate            |
 | `npm run db:types`           | Regenerate `src/types/database.ts` from the migrations    |
 | `npm run db:types:check`     | Fail if the generated types have drifted (for CI)         |
 
