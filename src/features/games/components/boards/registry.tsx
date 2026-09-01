@@ -1,5 +1,6 @@
 "use client";
 
+import { DrawGuessBoard } from "@/features/games/components/boards/draw-guess-board";
 import { WhoKnowsMeBoard } from "@/features/games/components/boards/who-knows-me-board";
 import { WouldYouRatherBoard } from "@/features/games/components/boards/would-you-rather-board";
 
@@ -24,6 +25,11 @@ import { WouldYouRatherBoard } from "@/features/games/components/boards/would-yo
  */
 
 export interface BoardProps {
+  /**
+   * The session, for a board that needs the `game:{id}` topic for its own
+   * traffic. Draw & Guess broadcasts strokes on it; the others do not need it.
+   */
+  sessionId: string;
   /** The engine's `publicView`. Never carries anybody else's secrets. */
   publicState: unknown;
   /** The engine's `viewFor(mySeat)`. Null when watching rather than playing. */
@@ -37,7 +43,7 @@ export interface BoardProps {
 }
 
 /** Games with a board. The rest render the "not built yet" panel. */
-const WITH_BOARDS = new Set(["would-you-rather", "who-knows-me"]);
+const WITH_BOARDS = new Set(["would-you-rather", "who-knows-me", "draw-guess"]);
 
 export function hasBoard(gameKey: string): boolean {
   return WITH_BOARDS.has(gameKey);
@@ -49,6 +55,8 @@ export function GameBoard({ gameKey, ...props }: BoardProps & { gameKey: string 
       return <WouldYouRatherBoard {...props} />;
     case "who-knows-me":
       return <WhoKnowsMeBoard {...props} />;
+    case "draw-guess":
+      return <DrawGuessBoard {...props} />;
     default:
       return null;
   }

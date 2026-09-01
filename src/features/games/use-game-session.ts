@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { refreshGameAction, resyncGameAction } from "@/features/games/actions";
 import type { GameSession } from "@/features/games/queries";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { channels, PRIVATE_CHANNEL } from "@/lib/supabase/realtime";
+import { channels } from "@/lib/supabase/realtime";
+import { subscribeToTopic } from "@/lib/supabase/shared-channel";
 import { subscribeToUserEvents } from "@/lib/supabase/user-channel";
 
 /**
@@ -135,34 +135,33 @@ export function useGameSession(
   /* ------------------------------------------------------- the table's channel */
 
   useEffect(() => {
-    const supabase = getSupabaseBrowserClient();
-    const channel = supabase.channel(channels.game(sessionId), PRIVATE_CHANNEL);
-
-    channel
-      .on("broadcast", { event: "game.started" }, ({ payload }) => {
-        applyPublic(payload as StatePayload);
-        void reload();
-      })
-      .on("broadcast", { event: "game.moved" }, ({ payload }) =>
-        applyPublic(payload as StatePayload),
-      )
-      .on("broadcast", { event: "game.finished" }, ({ payload }) => {
-        applyPublic(payload as StatePayload);
-        // Scores and placements land on `game_players`, which the socket payload
-        // does not carry — the scoreboard reads them from the session.
-        void reload();
-      })
-      .on("broadcast", { event: "game.synced" }, ({ payload }) =>
-        applyPublic(payload as StatePayload),
-      )
-      // Somebody joined, readied, left, or the host changed. A nudge rather than
-      // the data: everybody refetches through RLS, so a spectator cannot be sent
-      // something a player can see.
-      .on("broadcast", { event: "game.lobby" }, () => void reload())
-      .subscribe((status) => setConnected(status === "SUBSCRIBED"));
+    const subscription = subscribeToTopic(
+      channels.game(sessionId),
+      {
+        "game.started": (payload) => {
+          applyPublic(payload as StatePayload);
+          void reload();
+        },
+        "game.moved": (payload) => applyPublic(payload as StatePayload),
+        "game.finished": (payload) => {
+          applyPublic(payload as StatePayload);
+          // Scores and placements land on `game_players`, which the socket payload
+          // does not carry — the scoreboard reads them from the session.
+          void reload();
+        },
+        "game.synced": (payload) => applyPublic(payload as StatePayload),
+        // Somebody joined, readied, left, or the host changed. A nudge rather than
+        // the data: everybody refetches through RLS, so a spectator cannot be sent
+        // something a player can see.
+        "game.lobby": () => void reload(),
+      },
+      // Shared, so a board needing the same topic for its own traffic — a canvas,
+      // say — joins it once rather than opening a second Phoenix join.
+      setConnected,
+    );
 
     return () => {
-      void supabase.removeChannel(channel);
+      subscription.unsubscribe();
     };
   }, [sessionId, applyPublic, reload]);
 

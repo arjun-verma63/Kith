@@ -29,6 +29,10 @@ import { asService, asUser, createUser, freshDatabase } from "./harness.mjs";
 
 register(pathToFileURL(join(import.meta.dirname, "alias-loader.mjs")).href);
 
+// The registry is the authority on what is playable; the catalogue must agree.
+const { registeredKeys } = await import("../../src/features/games/engine/index.ts");
+const ENGINE_KEYS = registeredKeys();
+
 const { whoKnowsMe: engine, QUESTIONS } =
   await import("../../src/features/games/engine/games/who-knows-me.ts");
 
@@ -593,12 +597,18 @@ const room = roomRows[0].id;
   eq("two to six players", [rows[0].min_players, rows[0].max_players], [2, 6]);
   eq("everybody acts at once", rows[0].pace, "realtime");
 
+  // Counted against the registry rather than a literal: a hardcoded number here
+  // breaks every time a game is added, which has now happened twice.
   const { rows: playable } = await asUser(
     db,
     ada,
-    "select count(*)::int as n from public.list_games() where enabled",
+    "select key from public.list_games() where enabled",
   );
-  eq("two games are playable now", playable[0].n, 2);
+  eq(
+    "every enabled game has an engine behind it",
+    playable.map((g) => g.key).sort(),
+    [...ENGINE_KEYS].sort(),
+  );
 }
 
 {

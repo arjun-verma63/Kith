@@ -326,6 +326,7 @@ function Board({ session, view }: { session: GameSession; view: GameView }) {
       <Panel tone="flat" padding="lg" className="rounded-soft">
         <GameBoard
           gameKey={session.gameKey}
+          sessionId={session.id}
           publicState={view.publicState}
           privateState={view.privateState}
           mySeat={session.mySeat}

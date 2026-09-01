@@ -3,10 +3,10 @@
 The machinery that every game runs on, and the one interface a new game has to
 implement.
 
-**Two games are built** (§10): Would You Rather and Who Knows Me Better?. The
-other five catalogue rows still ship `enabled = false` and show on the shelf as
-"Soon" — a game becomes playable only when it has both a registered engine and
-an enabled row.
+**Three games are built** (§10): Would You Rather, Who Knows Me Better? and
+Draw & Guess. The remaining catalogue rows still ship `enabled = false` and show
+on the shelf as "Soon" — a game becomes playable only when it has both a
+registered engine and an enabled row.
 
 ---
 
@@ -282,6 +282,7 @@ the caller's own identity before touching the runtime.
 npm run games:test    109 assertions — the machinery
 npm run wyr:test      102 assertions — Would You Rather
 npm run wkm:test      112 assertions — Who Knows Me Better?
+npm run draw:test     125 assertions — Draw & Guess, including the wire protocol
 ```
 
 Mostly negative, and aimed at the seam rather than the surface. Can somebody not
@@ -366,6 +367,67 @@ Other decisions worth the words:
 - Indices are stored canonically and converted to display positions in one place,
   so the shuffle can never make the state and the UI disagree about which option
   was picked.
+
+### Draw & Guess
+
+One person gets a word and draws it; everybody else types guesses into the
+game's chat. Correct guesses score by how fast they arrive, the drawer scores by
+how many people got there, and the pencil passes on.
+
+**The drawing does not go through the move pipeline, and that is the whole
+design.** A hand moving across a canvas makes dozens of points a second. Through
+the engine each one would be a row in an append-only log, a rewrite of the state
+blob and a version bump racing every other player — for data that is worthless
+the moment the round ends.
+
+So strokes are **broadcast client to client and never stored**, the same class of
+thing as a typing indicator (§ARCHITECTURE 6). What stays authoritative is
+everything that decides an outcome: the word, the guesses, who was right, when.
+Migration 0020 adds no schema at all despite this being by far the most
+data-heavy game.
+
+#### Four things that make the stream small
+
+`features/games/canvas.ts` is the protocol, and it is pure so all of it is
+tested:
+
+1. **Vectors, not pixels.** A stroke is a handful of numbers; a PNG of it is tens
+   of kilobytes.
+2. **A normalised 0–1023 integer grid.** Smaller on the wire than floats, and —
+   the real reason — resolution-independent, so a phone and a laptop draw the
+   same picture rather than one scaled wrongly.
+3. **Simplification.** Points closer than six grid units to the last kept one are
+   dropped. A slow, deliberate line is where the point count explodes and where
+   the extra points carry nothing.
+4. **Batching.** Points accumulate and flush on a 60ms timer. Same trick as
+   trickle ICE, same reason: the free tier has a monthly message allowance.
+
+The suite measures it rather than asserting it in a comment — a realistic
+four-second stroke, counted against what one-broadcast-per-pointer-event would
+cost.
+
+#### Reconnecting
+
+Strokes are never stored, so a guesser who refreshes has nothing to fetch. They
+broadcast `draw.request` and the drawer — who still holds the whole picture —
+replies with a snapshot. No server storage, one message.
+
+#### Two other decisions
+
+- **Guessing is chat, and chat is a move.** A few per player per round, so the
+  cost is nothing and correctness is decided server-side. A client that judged
+  its own guesses would be a client that always guessed correctly.
+- **A correct guess is never echoed.** Publishing it hands the word to everybody
+  still guessing, so the chat says "Ada got it" and the word waits for the
+  reveal.
+
+#### The one thing a client has to police
+
+The `game:{id}` write policy allows any player to broadcast, because SQL cannot
+know which of them is drawing this round. Stroke events from anybody who is not
+the current drawer are therefore ignored client-side. The worst a mischievous
+player can do is send messages nobody applies — worth knowing, and written down
+rather than discovered.
 
 ## 11. Not built
 
