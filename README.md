@@ -55,6 +55,7 @@ served from our own origin.
 | `npm run mfa:test`           | Two-factor: the data-layer gate, routing, RFC 6238         |
 | `npm run account:test`       | Deletion, sessions, privacy controls, what a page may show |
 | `npm run safety:test`        | Blocking across every surface, and reports                 |
+| `npm run settings:test`      | Every preference, and that each one changes something      |
 | `npm run profile:test`       | Profile triggers, username rules, storage policies         |
 | `npm run friends:test`       | Requests, friendships, the constraints behind them         |
 | `npm run presence:test`      | The presence resolution rule and its channel policy        |
@@ -195,6 +196,13 @@ rather than dropping the row**: `profiles.id` cascades from `auth.users`, and tw
 of the onward edges are other people's data (every game they hosted, and the
 couple record with both partners' answers in it). One person leaving should not
 delete five other people's evenings.
+
+**[docs/SETTINGS.md](docs/SETTINGS.md)** covers the seven settings sections and
+the rule they are built on: every control does something. `user_settings` had
+nine columns and three of them were read by nothing — the theme lived in
+`localStorage`, motion was a comment saying the setting was coming, and
+notification preferences were consulted by no code at all. There is still no
+read-receipts toggle, because KITH has no "seen by" indicator for one to govern.
 
 **[docs/SAFETY.md](docs/SAFETY.md)** covers blocking and reporting. The part
 worth reading is the audit: blocking had been checked in nine places since

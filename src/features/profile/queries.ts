@@ -74,27 +74,57 @@ export const getOwnProfile = cache(async (): Promise<ProfileView | null> => {
 /**
  * Anyone's profile, by username.
  *
- * Matched case-insensitively so `/u/Ada` and `/u/ada` are the same person, which
- * is what the `lower(username)` unique index already guarantees. Returns null
- * for "no such person" AND for "blocked" — deliberately indistinguishable, since
- * a different response for the second would confirm the account exists.
+ * Through `get_profile` rather than a table select, because one field on a
+ * profile now has its own audience: `show_birthday` decides whether the birthday
+ * comes back, and `profiles_select` is a ROW policy with no way to hide one
+ * column of a row from one viewer. Redacting it here instead would put the rule
+ * in the one place this file says rules must not live.
+ *
+ * The function applies the same block rule the policy did, plus the birthday
+ * scope and the deleted-account rule. Returns null for "no such person", for
+ * "blocked", and for "deleted" — deliberately indistinguishable, since a
+ * different response for any of them would confirm the account exists.
  */
 export const getProfileByUsername = cache(async (username: string): Promise<ProfileView | null> => {
   const supabase = await createSupabaseServerClient();
   const user = await getCurrentUser();
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .ilike("username", username)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("get_profile", { p_username: username });
 
-  if (error || !data) return null;
+  const row = data?.[0];
+  if (error || !row?.id) return null;
 
+  /*
+   * Built field by field rather than spread.
+   *
+   * `get_profile` returns a subset of `profiles`, and every column of a
+   * `returns table` is nullable as far as the generated types are concerned. A
+   * spread would need a cast to paper over that, and a cast here is how a
+   * redacted birthday quietly becomes a non-null type that the UI then trusts.
+   */
   return {
-    ...data,
-    avatarUrl: await signAvatar(data.avatar_path),
-    isOwn: data.id === user?.id,
+    id: row.id,
+    username: row.username ?? "",
+    display_name: row.display_name ?? "",
+    avatar_path: row.avatar_path,
+    bio: row.bio,
+    pronouns: row.pronouns,
+    accent: row.accent ?? "ember",
+    status: row.status ?? "auto",
+    status_text: row.status_text,
+    status_expires_at: row.status_expires_at,
+    birthday: row.birthday,
+    last_seen_at: row.last_seen_at ?? new Date(0).toISOString(),
+    created_at: row.created_at ?? new Date(0).toISOString(),
+    // Never read from another person's profile, and not returned by the
+    // function. Mirrored from created_at so the shape still satisfies the row
+    // type the rest of the app passes around.
+    updated_at: row.created_at ?? new Date(0).toISOString(),
+    deleted_at: row.deleted_at,
+    // Nobody else's business — it exists to rate-limit your own renames.
+    username_changed_at: null,
+    avatarUrl: await signAvatar(row.avatar_path),
+    isOwn: row.id === user?.id,
   };
 });
 

@@ -1,5 +1,8 @@
 "use client";
 
+import { useTransition } from "react";
+
+import { setThemeAction } from "@/features/settings/actions";
 import { THEME_STORAGE_KEY } from "@/lib/constants";
 import { cn } from "@/lib/utils/cn";
 
@@ -11,6 +14,8 @@ import { cn } from "@/lib/utils/cn";
  * the server and then correct itself after hydration.
  */
 export function ThemeToggle({ className }: { className?: string }) {
+  const [, startTransition] = useTransition();
+
   function toggle() {
     const root = document.documentElement;
     const next = root.dataset["theme"] === "daylight" ? "dusk" : "daylight";
@@ -19,8 +24,19 @@ export function ThemeToggle({ className }: { className?: string }) {
     try {
       window.localStorage.setItem(THEME_STORAGE_KEY, next);
     } catch {
-      // Private browsing / storage disabled — the choice just won't persist.
+      // Private browsing / storage disabled — the pre-paint hint won't persist,
+      // but the server copy below still will.
     }
+
+    /*
+     * Saved to the account as well, so the flip follows the person rather than
+     * the browser. Deliberately not awaited: the attribute already changed, and
+     * making a theme toggle feel like a network request would be a strange
+     * thing to do to the fastest control in the app.
+     */
+    startTransition(async () => {
+      await setThemeAction(next);
+    });
   }
 
   return (

@@ -504,23 +504,28 @@
     }
   }
 
-  /* Motion policy: under reduced motion the looping indicators hold at a
-     legible resting state instead of freezing at 1ms mid-cycle. */
+  /* Motion policy: with motion turned down the looping indicators hold at a
+     legible resting state instead of freezing at 1ms mid-cycle.
+     `:not([data-motion="full"])` is gone from the media query for the same
+     reason as in tokens.css — with `full` the default, it meant the system
+     preference reached nobody. */
   @media (prefers-reduced-motion: reduce) {
-    :root:not([data-motion="full"]) .skeleton::after {
+    .skeleton::after {
       display: none;
     }
 
-    :root:not([data-motion="full"]) .pulse-ember {
+    .pulse-ember {
       opacity: 0.7;
       transform: none;
     }
   }
 
+  [data-motion="reduced"] .skeleton::after,
   [data-motion="off"] .skeleton::after {
     display: none;
   }
 
+  [data-motion="reduced"] .pulse-ember,
   [data-motion="off"] .pulse-ember {
     opacity: 0.7;
     transform: none;

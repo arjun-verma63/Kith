@@ -14,8 +14,14 @@ export default async function ProfileSettingsPage() {
 
   return (
     <>
-      <div className="mb-8 flex items-end justify-between gap-4">
-        <h1 className="display text-d-xs text-fg-loud">Your profile</h1>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-col gap-1.5">
+          <h2 className="heading text-md text-fg-loud">Profile</h2>
+          <p className="max-w-prose text-sm leading-body text-fg-dim">
+            What everybody in the room sees. Your birthday is the one field with its own visibility
+            setting, over in Privacy.
+          </p>
+        </div>
 
         <ButtonLink href={`/u/${profile.username}`} variant="ghost" size="sm">
           View as others see it

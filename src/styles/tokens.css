@@ -290,11 +290,29 @@
 /* ========================================================= REDUCED MOTION */
 /* Three tiers, not a boolean. `data-motion` on <html> is the single source of
    truth so CSS and JS can never disagree.
-     full     — default
-     reduced  — system preference; opacity/colour only
-     off      — explicit user setting (Settings → Appearance, Phase 2) */
+
+     full     — animate, unless the system asks not to
+     reduced  — opacity and colour only, whatever the system says
+     off      — nothing moves, whatever the system says
+
+   Until Settings → Appearance existed, every rule below sat inside a
+   `prefers-reduced-motion` media query and was keyed on `:not([data-motion="full"])`
+   — which, with `full` as the default, meant the system preference was honoured
+   for nobody and the two explicit values did almost nothing. Both halves are
+   fixed here:
+
+     · The system preference now applies on its own, with no attribute needed.
+       `full` deliberately does NOT override it. An app setting that can switch
+       an accessibility preference back on is an app setting that should not
+       exist, and somebody who has asked their operating system for calm is not
+       asking KITH to argue.
+
+     · The explicit values now apply on their own, with no media query. That is
+       the entire point of offering them: somebody whose system says nothing can
+       still turn the motion down here. */
+
 @media (prefers-reduced-motion: reduce) {
-  :root:not([data-motion="full"]) {
+  :root {
     --t-tap: 0ms;
     --t-quick: 0ms;
     --t-base: 0ms;
@@ -302,12 +320,10 @@
     --t-journey: 0ms;
     --t-story: 0ms;
   }
-}
 
-@media (prefers-reduced-motion: reduce) {
-  :root:not([data-motion="full"]) *,
-  :root:not([data-motion="full"]) *::before,
-  :root:not([data-motion="full"]) *::after {
+  :root *,
+  :root *::before,
+  :root *::after {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
@@ -315,6 +331,19 @@
   }
 }
 
+/* Chosen in Settings → Appearance. Applies regardless of the system. */
+[data-motion="reduced"],
+[data-motion="off"] {
+  --t-tap: 0ms;
+  --t-quick: 0ms;
+  --t-base: 0ms;
+  --t-considered: 0ms;
+  --t-journey: 0ms;
+  --t-story: 0ms;
+}
+
+/* `reduced` keeps ambient animation — the ember pulse, the skeleton shimmer —
+   because those carry meaning that a still frame does not. `off` stops it. */
 [data-motion="off"] *,
 [data-motion="off"] *::before,
 [data-motion="off"] *::after {

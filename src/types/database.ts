@@ -747,6 +747,7 @@ export type Database = {
           created_at: string;
           updated_at: string;
           who_can_propose: Database["public"]["Enums"]["permission_scope"];
+          show_birthday: Database["public"]["Enums"]["permission_scope"];
         };
         Insert: {
           user_id: string;
@@ -761,6 +762,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           who_can_propose?: Database["public"]["Enums"]["permission_scope"];
+          show_birthday?: Database["public"]["Enums"]["permission_scope"];
         };
         Update: {
           user_id?: string;
@@ -775,6 +777,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
           who_can_propose?: Database["public"]["Enums"]["permission_scope"];
+          show_birthday?: Database["public"]["Enums"]["permission_scope"];
         };
         Relationships: [];
       };
@@ -1000,6 +1003,27 @@ export type Database = {
             anniversary: string | null;
             started_at: string | null;
             prompt_count: number | null;
+        }[];
+      };
+      get_profile: {
+        Args: {
+          p_username: string;
+        };
+        Returns: {
+            id: string | null;
+            username: string | null;
+            display_name: string | null;
+            avatar_path: string | null;
+            bio: string | null;
+            pronouns: string | null;
+            accent: Database["public"]["Enums"]["profile_accent"] | null;
+            status: Database["public"]["Enums"]["presence_status"] | null;
+            status_text: string | null;
+            status_expires_at: string | null;
+            birthday: string | null;
+            last_seen_at: string | null;
+            created_at: string | null;
+            deleted_at: string | null;
         }[];
       };
       has_answered_prompt: {
@@ -1326,6 +1350,13 @@ export type Database = {
       };
       mfa_satisfied: {
         Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      notification_enabled: {
+        Args: {
+          p_user_id: string;
+          p_kind: Database["public"]["Enums"]["notification_kind"];
+        };
         Returns: boolean;
       };
       open_couple_prompt: {

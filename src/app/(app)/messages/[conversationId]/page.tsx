@@ -7,6 +7,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { CallButton } from "@/features/calls/components/call-button";
 import { Icon } from "@/components/ui/icon";
 import { MessageThread } from "@/features/messages/components/message-thread";
+import { getPreferences } from "@/features/settings/queries";
 import { listConversationMembers } from "@/features/messages/members";
 import { getConversation, listMessages } from "@/features/messages/queries";
 import type { DeclaredStatus } from "@/lib/presence";
@@ -48,9 +49,12 @@ export default async function ConversationPage({
   const conversation = await getConversation(conversationId);
   if (!conversation) notFound();
 
-  const [page, members] = await Promise.all([
+  const [page, members, preferences] = await Promise.all([
     listMessages(conversationId),
     listConversationMembers(conversationId),
+    // Whether this person broadcasts that they are typing. Folded into the batch
+    // rather than costing the thread another round trip.
+    getPreferences(),
   ]);
 
   return (
@@ -104,6 +108,7 @@ export default async function ConversationPage({
         currentUserId={user.id}
         initial={page}
         memberNames={members}
+        broadcastTyping={preferences.typingIndicators}
       />
     </section>
   );

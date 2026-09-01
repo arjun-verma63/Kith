@@ -35,14 +35,8 @@ import { asService, asUser, asUserAtAal, createUser, freshDatabase } from "./har
 
 register(pathToFileURL(join(import.meta.dirname, "alias-loader.mjs")).href);
 
-const {
-  changePasswordSchema,
-  coarsenIp,
-  confirmsDeletion,
-  describeDevice,
-  PRIVACY_CONTROLS,
-  privacySchema,
-} = await import("../../src/features/auth/account.ts");
+const { changePasswordSchema, coarsenIp, confirmsDeletion, describeDevice } =
+  await import("../../src/features/auth/account.ts");
 
 let passed = 0;
 let failed = 0;
@@ -207,59 +201,17 @@ section("Schemas");
     "nor the password they already have",
     password({ newPassword: "the-old-one-12", confirmPassword: "the-old-one-12" }).success,
   );
-
-  truthy(
-    "privacy accepts the three scopes",
-    privacySchema.safeParse({
-      discoverable: false,
-      whoCanMessage: "nobody",
-      whoCanCall: "friends",
-      whoCanPropose: "everyone",
-    }).success,
-  );
-  falsy(
-    "and refuses one it does not know",
-    privacySchema.safeParse({
-      discoverable: true,
-      whoCanMessage: "anyone",
-      whoCanCall: "friends",
-      whoCanPropose: "friends",
-    }).success,
-  );
 }
 
 /* ==========================================================================
- * 2 · Every privacy control is enforced somewhere
+ * 2 · who_can_call, which this migration wired in
  * ========================================================================== */
 
-section("Privacy controls are real");
+// The privacy vocabulary moved to the settings slice in 0027, and so did the
+// invariant that every control names a function that exists — see
+// settings.test.mjs. What stays here is the enforcement `start_call` gained.
 
 const db = await freshDatabase();
-
-{
-  /*
-   * The invariant that keeps this section honest.
-   *
-   * A switch on the settings page whose `enforcedBy` function does not exist is
-   * a promise the database does not keep. `who_can_call` sat in that state from
-   * migration 0002 until 0025.
-   */
-  const missing = [];
-
-  for (const control of PRIVACY_CONTROLS) {
-    const { rows } = await asService(
-      db,
-      `select 1 from pg_proc p
-         join pg_namespace n on n.oid = p.pronamespace
-        where n.nspname = 'public' and p.proname = $1`,
-      [control.enforcedBy],
-    );
-    if (rows.length === 0) missing.push(`${control.key} -> ${control.enforcedBy}()`);
-  }
-
-  eq("every control on the page names a function that exists", missing, []);
-  eq("and there are four of them", PRIVACY_CONTROLS.length, 4);
-}
 
 const ada = await createUser(db, "ada");
 const rafa = await createUser(db, "rafa");

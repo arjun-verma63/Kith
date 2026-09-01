@@ -122,6 +122,10 @@ both submit — enforced in RLS, not UI), `couple_milestones`, `couple_notes`.
   `PRIVACY_CONTROLS` names the function for each one so a switch cannot ship
   without an enforcer. `who_can_call` sat unread from migration 0002 until 0025;
   a control that controls nothing is a promise the database does not keep.
+  Migration 0027 did the same for `notification_prefs` (a `BEFORE INSERT` gate on
+  `notifications`, one place rather than seven) and added `show_birthday`, which
+  needed `get_profile` because a row policy cannot redact a column. See
+  [SETTINGS.md](SETTINGS.md).
 - **Account deletion anonymises rather than cascades** (migration 0025). See
   [ACCOUNT.md](ACCOUNT.md) §4 for the two edges that make a hard delete somebody
   else's problem.

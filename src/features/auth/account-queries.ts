@@ -1,12 +1,6 @@
 import "server-only";
 
-import {
-  coarsenIp,
-  describeDevice,
-  type PermissionScope,
-  type PrivacySettings,
-  type SessionSummary,
-} from "@/features/auth/account";
+import { coarsenIp, describeDevice, type SessionSummary } from "@/features/auth/account";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -72,32 +66,4 @@ export async function listSessions(): Promise<SessionList> {
   }));
 
   return { sessions, supported: true };
-}
-
-/* ----------------------------------------------------------------- privacy */
-
-const scope = (value: string | null | undefined): PermissionScope =>
-  value === "everyone" || value === "nobody" ? value : "friends";
-
-/**
- * The privacy settings, with the defaults the database would apply.
- *
- * A missing row is not an error: `user_settings` is created by the signup
- * trigger, but a page that falls over because a row is absent is a page that
- * falls over during a migration. The defaults here match the column defaults.
- */
-export async function getPrivacySettings(): Promise<PrivacySettings> {
-  const supabase = await createSupabaseServerClient();
-
-  const { data } = await supabase
-    .from("user_settings")
-    .select("discoverable, who_can_message, who_can_call, who_can_propose")
-    .maybeSingle();
-
-  return {
-    discoverable: data?.discoverable ?? true,
-    whoCanMessage: scope(data?.who_can_message),
-    whoCanCall: scope(data?.who_can_call),
-    whoCanPropose: scope(data?.who_can_propose),
-  };
 }

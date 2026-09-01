@@ -37,11 +37,22 @@ export function MessageThread({
   currentUserId,
   initial,
   memberNames,
+  broadcastTyping,
 }: {
   conversationId: string;
   currentUserId: string;
   initial: MessagePage;
   memberNames: Record<string, string>;
+  /**
+   * `user_settings.typing_indicators`, from Settings → Privacy.
+   *
+   * Honoured by not sending, which is the only place it CAN be honoured: nothing
+   * can stop somebody else's browser broadcasting a keystroke, but this setting
+   * is about your own broadcast and your own browser is exactly what this
+   * controls. Receiving is unaffected — turning yours off does not blind you to
+   * other people's, because that is their choice to make, not yours.
+   */
+  broadcastTyping: boolean;
 }) {
   const [messages, setMessages] = useState<Message[]>(initial.messages);
   const [cursor, setCursor] = useState(initial.cursor);
@@ -227,12 +238,15 @@ export function MessageThread({
       <Composer
         conversationId={conversationId}
         connected={connected}
-        onTyping={sendTyping}
+        onTyping={broadcastTyping ? sendTyping : noop}
         onSent={refresh}
       />
     </div>
   );
 }
+
+/** Somebody has turned typing indicators off. Nothing leaves the browser. */
+function noop() {}
 
 function Composer({
   conversationId,

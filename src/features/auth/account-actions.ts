@@ -4,11 +4,12 @@ import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { changePasswordSchema, confirmsDeletion, privacySchema } from "@/features/auth/account";
+import { changePasswordSchema, confirmsDeletion } from "@/features/auth/account";
+import { emailSchema } from "@/features/auth/schema";
 import { totpCodeSchema } from "@/features/auth/mfa";
 import { getMfaStatus, recordSecurityEvent } from "@/features/auth/mfa-queries";
 import { BUCKETS } from "@/lib/supabase/storage";
-import { getSupabasePublicEnv } from "@/lib/env/client";
+import { clientEnv, getSupabasePublicEnv } from "@/lib/env/client";
 import { toFieldErrors, type FormState } from "@/lib/forms";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -148,6 +149,77 @@ export async function changePasswordAction(
 }
 
 /* ========================================================================== */
+/*  Email                                                                     */
+/* ========================================================================== */
+
+/**
+ * Changes the address the account signs in with.
+ *
+ * Nothing happens immediately. Supabase sends a confirmation to the NEW address
+ * and the change lands only when that link is followed — which is the important
+ * property: somebody who gets thirty seconds at an unlocked laptop cannot move
+ * the account to an inbox they control, because they would need to open that
+ * inbox too.
+ *
+ * The current password is still required. The confirmation is what stops the
+ * change completing; the password is what stops it being started, so the real
+ * owner does not get an email saying their account is being moved.
+ */
+export async function changeEmailAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = emailSchema.safeParse(formData.get("email"));
+  const password = String(formData.get("password") ?? "");
+
+  if (!parsed.success) {
+    return fieldError({ email: [parsed.error.issues[0]?.message ?? "That is not an address."] });
+  }
+  if (!password) return fieldError({ password: ["Enter your password."] });
+
+  const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user?.email) return { status: "error", message: "Sign in again." };
+
+  if (parsed.data === user.email.toLowerCase()) {
+    return fieldError({ email: ["That is already your address."] });
+  }
+
+  if (!(await passwordIsCorrect(user.email, password))) {
+    await recordSecurityEvent(user.id, "email.change_failed");
+    return fieldError({ password: ["That is not your password."] });
+  }
+
+  const { error } = await supabase.auth.updateUser(
+    { email: parsed.data },
+    { emailRedirectTo: `${clientEnv.NEXT_PUBLIC_SITE_URL}/auth/confirm` },
+  );
+
+  if (error) {
+    // Rate limiting is worth saying. "That address is already in use" is not —
+    // on an invitation-only app it would confirm who is a member.
+    if (error.status === 429) {
+      return { status: "error", message: "Too many attempts. Wait a minute and try again." };
+    }
+    console.error("[kith:auth] email change failed", { status: error.status });
+    return {
+      status: "success",
+      message:
+        "Check the new address for a confirmation link. Nothing changes until you follow it.",
+    };
+  }
+
+  await recordSecurityEvent(user.id, "email.change_requested");
+  revalidatePath("/settings/account");
+
+  return {
+    status: "success",
+    message: "Check the new address for a confirmation link. Nothing changes until you follow it.",
+  };
+}
+
+/* ========================================================================== */
 /*  Sessions                                                                  */
 /* ========================================================================== */
 
@@ -183,57 +255,6 @@ export async function signOutOthersAction(): Promise<FormState> {
   revalidatePath("/settings/security");
 
   return { status: "success", message: "Every other device has been signed out." };
-}
-
-/* ========================================================================== */
-/*  Privacy                                                                   */
-/* ========================================================================== */
-
-/**
- * Saves the privacy controls.
- *
- * Written with the caller's own client, so the `user_settings` policy is what
- * limits this to their row. Every one of these four is read by a SQL function
- * that decides what other people may do — see PRIVACY_CONTROLS — so this is a
- * change to policy input, not to a display preference.
- */
-export async function savePrivacyAction(_prev: FormState, formData: FormData): Promise<FormState> {
-  const parsed = privacySchema.safeParse({
-    discoverable: formData.get("discoverable") === "on",
-    whoCanMessage: formData.get("whoCanMessage"),
-    whoCanCall: formData.get("whoCanCall"),
-    whoCanPropose: formData.get("whoCanPropose"),
-  });
-
-  if (!parsed.success) return fieldError(toFieldErrors(parsed.error));
-
-  const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return { status: "error", message: "Sign in again." };
-
-  const { error } = await supabase
-    .from("user_settings")
-    .update({
-      discoverable: parsed.data.discoverable,
-      who_can_message: parsed.data.whoCanMessage,
-      who_can_call: parsed.data.whoCanCall,
-      who_can_propose: parsed.data.whoCanPropose,
-    })
-    .eq("user_id", user.id);
-
-  if (error) {
-    console.error("[kith:auth] privacy save failed", { code: error.code });
-    return { status: "error", message: "That could not be saved." };
-  }
-
-  revalidatePath("/settings/security");
-  revalidatePath("/couple");
-
-  return { status: "success", message: "Saved." };
 }
 
 /* ========================================================================== */

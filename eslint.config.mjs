@@ -25,6 +25,7 @@ const FEATURE_SLICES = [
   "notifications",
   "profile",
   "safety",
+  "settings",
 ];
 
 const noFeatureImports = {

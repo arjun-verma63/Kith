@@ -15,6 +15,8 @@ import { countUnreadNotifications, listNotifications } from "@/features/notifica
 import { RoomCount } from "@/components/presence/room-count";
 import { PresenceHeartbeat } from "@/features/profile/components/presence-heartbeat";
 import { listFriends } from "@/features/friends/queries";
+import { AppearanceBoot } from "@/features/settings/components/appearance-boot";
+import { getAppearance } from "@/features/settings/queries";
 import { getOwnProfile } from "@/features/profile/queries";
 import type { DeclaredStatus } from "@/lib/presence";
 
@@ -40,8 +42,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   // directory of everyone who happens to hold an account.
   // Fetched in parallel: three reads with nothing to say to each other should
   // not cost three sequential round trips on every page in the app.
-  const [friends, notifications, unread, activeCall, couple, coupleInvitations] = await Promise.all(
-    [
+  const [friends, notifications, unread, activeCall, couple, coupleInvitations, appearance] =
+    await Promise.all([
       listFriends(),
       listNotifications(),
       countUnreadNotifications(),
@@ -50,8 +52,10 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       getActiveCall(),
       getMyCouple(),
       listInvitations(),
-    ],
-  );
+      // Two columns, folded into the batch that was already running rather than
+      // costing the shell another round trip.
+      getAppearance(),
+    ]);
 
   /*
    * Couple mode is optional and stays out of the way.
@@ -65,6 +69,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   return (
     <PresenceProvider userId={profile.id} status={profile.status as DeclaredStatus}>
+      <AppearanceBoot theme={appearance.theme} motion={appearance.motion} />
       <CallProvider userId={profile.id} initialCall={activeCall}>
         <div className="flex min-h-dvh flex-col">
           {/* Two mechanisms, two jobs. The channel above answers "who is connected

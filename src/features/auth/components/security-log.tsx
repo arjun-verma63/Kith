@@ -21,6 +21,8 @@ const LABELS: Record<string, string> = {
   "mfa.challenge_passed": "Signed in with a code",
   "password.changed": "Changed the password",
   "password.change_failed": "A password change was refused",
+  "email.change_requested": "Asked to change the email address",
+  "email.change_failed": "An email change was refused",
   "sessions.revoked_others": "Signed out every other device",
   "account.deleted": "Deleted the account",
   "account.delete_failed": "An account deletion was refused",
@@ -37,6 +39,7 @@ const ALARMING = new Set([
   "mfa.challenge_failed",
   "mfa.disabled",
   "password.change_failed",
+  "email.change_failed",
   "account.delete_failed",
 ]);
 
