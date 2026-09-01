@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
-import { BUCKETS, SIGNED_URL_TTL_SECONDS } from "@/lib/supabase/storage";
+import { signAvatar } from "@/lib/supabase/avatars";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 import type { Tables } from "@/types/supabase";
 
@@ -22,31 +22,6 @@ export type Profile = Tables<"profiles">;
 export interface ProfileView extends Profile {
   avatarUrl: string | null;
   isOwn: boolean;
-}
-
-/**
- * Mints a short-lived URL for a private avatar object.
- *
- * The bucket is private, so there is no permanent URL to store — which is why
- * the column is `avatar_path`. Signing is a round trip, so it is done in a
- * batch where possible and `cache()`d per request.
- */
-async function signAvatar(path: string | null): Promise<string | null> {
-  if (!path) return null;
-
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.storage
-    .from(BUCKETS.avatars)
-    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
-
-  if (error) {
-    // A missing object is not worth failing a page render over — the avatar
-    // falls back to initials, which is a designed state rather than a broken one.
-    console.warn("[kith:storage] could not sign avatar", { message: error.message });
-    return null;
-  }
-
-  return data.signedUrl;
 }
 
 /**

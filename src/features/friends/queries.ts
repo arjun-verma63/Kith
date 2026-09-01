@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
-import { BUCKETS, SIGNED_URL_TTL_SECONDS } from "@/lib/supabase/storage";
+import { signAvatars } from "@/lib/supabase/avatars";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -32,34 +32,6 @@ export interface PersonCard {
   status: string;
   statusText: string | null;
   lastSeenAt: string | null;
-}
-
-/**
- * Signs a batch of avatar paths in one round trip.
- *
- * Signing them one at a time is the classic N+1: a friends list of six is six
- * sequential network calls before the page can render. `createSignedUrls` takes
- * the whole set.
- */
-async function signAvatars(paths: (string | null)[]): Promise<Map<string, string>> {
-  const unique = [...new Set(paths.filter((p): p is string => Boolean(p)))];
-  if (unique.length === 0) return new Map();
-
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.storage
-    .from(BUCKETS.avatars)
-    .createSignedUrls(unique, SIGNED_URL_TTL_SECONDS);
-
-  if (error || !data) return new Map();
-
-  const signed = new Map<string, string>();
-  for (const entry of data) {
-    // Storage reports per-object failures inside a successful batch — a path
-    // that no longer exists comes back with a null URL rather than throwing.
-    if (entry.path && entry.signedUrl) signed.set(entry.path, entry.signedUrl);
-  }
-
-  return signed;
 }
 
 function toCard(

@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
-import { BUCKETS, SIGNED_URL_TTL_SECONDS } from "@/lib/supabase/storage";
+import { signAvatars } from "@/lib/supabase/avatars";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -22,24 +22,6 @@ export type MessageRow = Fn["list_messages"]["Returns"][number];
 
 /** How many messages a page holds. Small enough to render instantly. */
 export const PAGE_SIZE = 30;
-
-async function signAvatars(paths: (string | null)[]): Promise<Map<string, string>> {
-  const unique = [...new Set(paths.filter((p): p is string => Boolean(p)))];
-  if (unique.length === 0) return new Map();
-
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.storage
-    .from(BUCKETS.avatars)
-    .createSignedUrls(unique, SIGNED_URL_TTL_SECONDS);
-
-  const signed = new Map<string, string>();
-  if (error || !data) return signed;
-
-  for (const entry of data) {
-    if (entry.path && entry.signedUrl) signed.set(entry.path, entry.signedUrl);
-  }
-  return signed;
-}
 
 export interface ConversationSummary {
   id: string;

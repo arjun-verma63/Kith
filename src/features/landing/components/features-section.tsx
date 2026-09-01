@@ -1,9 +1,10 @@
-"use client";
-
 import { Reveal, Section, SectionHeader } from "@/features/landing/components/reveal";
 import { FEATURES } from "@/features/landing/copy";
 
 /**
+ * Composes `Reveal`, which is the client component. This one is markup and
+ * copy, so it renders on the server and only the wrapper ships.
+ *
  * Features, as an editorial list rather than a card grid.
  *
  * Three equal cards in a row is the single most over-used layout on the web and

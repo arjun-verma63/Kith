@@ -2,6 +2,7 @@ import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 import { getSupabasePublicEnv } from "@/lib/env/client";
 import type { KithSupabaseClient } from "@/lib/supabase/client";
@@ -59,12 +60,28 @@ export async function createSupabaseServerClient(): Promise<KithSupabaseClient> 
  *
  * Authorization still does not rest on this. It is for rendering decisions —
  * the database decides who can read what.
+ *
+ * ── Cached for the request, and why that matters ─────────────────────────────
+ *
+ * `getUser()` is a NETWORK CALL. It is the whole reason this function exists
+ * rather than `getSession()` — the token goes to the Auth server to be checked —
+ * and every call gets a freshly constructed client, so nothing was deduplicating
+ * them.
+ *
+ * A single render asks two or three times: the shell through `getOwnProfile`,
+ * the page directly, sometimes a query underneath it. Those were two or three
+ * sequential round trips to Supabase Auth to answer the same question, on every
+ * navigation.
+ *
+ * `cache()` scopes one answer to one request, which is exactly the lifetime the
+ * answer is valid for. It does not cache across requests and must never be made
+ * to: a stale session is the one thing this function exists to prevent.
  */
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   return user;
-}
+});

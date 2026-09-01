@@ -1,5 +1,3 @@
-"use client";
-
 import type Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 
@@ -14,6 +12,11 @@ import { ButtonLink, type ButtonLinkProps } from "@/components/ui/button";
  * renaming a route breaks the build rather than the page.
  */
 
+/*
+ * A server component. There is nothing client about either export — the CTA is a
+ * link with a lookup table, and the provider below has been a pass-through since
+ * the dialog it owned was replaced by navigation.
+ */
 export type AuthIntent = "sign-in" | "request-invite";
 
 const HREF: Record<AuthIntent, ComponentProps<typeof Link>["href"]> = {

@@ -57,6 +57,8 @@ served from our own origin.
 | `npm run safety:test`        | Blocking across every surface, and reports                 |
 | `npm run settings:test`      | Every preference, and that each one changes something      |
 | `npm run mobile:test`        | Static mobile invariants — viewport units, layering, touch |
+| `npm run pwa:test`           | Manifest, icons, and the service worker's safety rules     |
+| `npm run perf:test`          | Round trips, cleanup, re-render pressure, pagination       |
 | `npm run profile:test`       | Profile triggers, username rules, storage policies         |
 | `npm run friends:test`       | Requests, friendships, the constraints behind them         |
 | `npm run presence:test`      | The presence resolution rule and its channel policy        |
@@ -198,6 +200,23 @@ rather than dropping the row**: `profiles.id` cascades from `auth.users`, and tw
 of the onward edges are other people's data (every game they hosted, and the
 couple record with both partners' answers in it). One person leaving should not
 delete five other people's evenings.
+
+**[docs/PERF.md](docs/PERF.md)** is the performance audit. Three changes: seven
+duplicate avatar signers became one request-scoped signer, collapsing five to
+seven Supabase Storage round trips per render into one; `getCurrentUser()` is
+request-cached, so a render revalidates the JWT once rather than three times; and
+five landing components stopped being client components. It also records a method
+error worth not repeating — `.next/static/chunks/` is not what a browser
+downloads, and reading it that way makes zod look like a 277 kB problem it is not.
+
+**[docs/PWA.md](docs/PWA.md)** covers installing KITH to a home screen. The short
+version of the important part: **there is no push.** KITH's notifications are
+rows in a table read by the bell in the header, they do not reach a locked phone,
+and nothing in the manifest or the service worker implies otherwise — the suite
+fails if a `gcm_sender_id` appears. The service worker caches build assets and
+nothing else, and `pwa:test` proves it by running the worker rather than grepping
+it: no HTML is cached, nothing cross-origin is touched, nothing but GET is
+touched.
 
 **[docs/MOBILE.md](docs/MOBILE.md)** is the mobile audit. The header carried ten
 items in one row, which does not fit a 375px screen — so the destinations moved

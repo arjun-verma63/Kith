@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { ReportReason } from "@/features/safety/reasons";
-import { BUCKETS, SIGNED_URL_TTL_SECONDS } from "@/lib/supabase/storage";
+import { signAvatars } from "@/lib/supabase/avatars";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -41,18 +41,7 @@ export async function listBlocked(): Promise<BlockedAccount[]> {
     return [];
   }
 
-  const paths = [...new Set(data.flatMap((row) => (row.avatar_path ? [row.avatar_path] : [])))];
-  const signed = new Map<string, string>();
-
-  if (paths.length > 0) {
-    const { data: urls } = await supabase.storage
-      .from(BUCKETS.avatars)
-      .createSignedUrls(paths, SIGNED_URL_TTL_SECONDS);
-
-    for (const entry of urls ?? []) {
-      if (entry.path && entry.signedUrl) signed.set(entry.path, entry.signedUrl);
-    }
-  }
+  const signed = await signAvatars(data.map((row) => row.avatar_path));
 
   return data.flatMap((row) =>
     row.id

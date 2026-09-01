@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
-import { BUCKETS, SIGNED_URL_TTL_SECONDS } from "@/lib/supabase/storage";
+import { signAvatars } from "@/lib/supabase/avatars";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -41,18 +41,7 @@ export const listNotifications = cache(async (): Promise<AppNotification[]> => {
 
   if (error || !data) return [];
 
-  const paths = [...new Set(data.map((row) => row.actor_avatar_path).filter(Boolean))] as string[];
-  const signed = new Map<string, string>();
-
-  if (paths.length > 0) {
-    const { data: urls } = await supabase.storage
-      .from(BUCKETS.avatars)
-      .createSignedUrls(paths, SIGNED_URL_TTL_SECONDS);
-
-    for (const entry of urls ?? []) {
-      if (entry.path && entry.signedUrl) signed.set(entry.path, entry.signedUrl);
-    }
-  }
+  const signed = await signAvatars(data.map((row) => row.actor_avatar_path));
 
   return data.map((row) => ({
     id: row.id ?? "",

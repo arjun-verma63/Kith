@@ -1,5 +1,3 @@
-"use client";
-
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icon";
 import { Reveal, Section, SectionHeader } from "@/features/landing/components/reveal";
@@ -7,6 +5,9 @@ import { GAMES } from "@/features/landing/copy";
 import { cn } from "@/lib/utils/cn";
 
 /**
+ * Composes `Reveal`, which is the client component. This one is markup and
+ * copy, so it renders on the server and only the wrapper ships.
+ *
  * Games.
  *
  * The one section where the system is allowed to be playful: `--ice` enters the

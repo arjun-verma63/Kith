@@ -1,10 +1,11 @@
-"use client";
-
 import { Icon } from "@/components/ui/icon";
 import { Reveal, Section, SectionHeader } from "@/features/landing/components/reveal";
 import { PRIVACY } from "@/features/landing/copy";
 
 /**
+ * Composes `Reveal`, which is the client component. This one is markup and
+ * copy, so it renders on the server and only the wrapper ships.
+ *
  * Privacy.
  *
  * Laid out as a specification, not as three padlock icons with adjectives under

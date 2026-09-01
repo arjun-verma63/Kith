@@ -1,6 +1,6 @@
 import "server-only";
 
-import { BUCKETS, SIGNED_URL_TTL_SECONDS } from "@/lib/supabase/storage";
+import { signAvatar, signAvatars } from "@/lib/supabase/avatars";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -19,35 +19,6 @@ type Fn = Database["public"]["Functions"];
 export type CoupleRow = Fn["get_my_couple"]["Returns"][number];
 export type InvitationRow = Fn["list_couple_invitations"]["Returns"][number];
 export type PromptRow = Fn["list_couple_prompts"]["Returns"][number];
-
-async function signAvatar(path: string | null): Promise<string | null> {
-  if (!path) return null;
-
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.storage
-    .from(BUCKETS.avatars)
-    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
-
-  return data?.signedUrl ?? null;
-}
-
-async function signAvatars(paths: (string | null)[]): Promise<Map<string, string>> {
-  const unique = [...new Set(paths.filter((p): p is string => Boolean(p)))];
-  if (unique.length === 0) return new Map();
-
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.storage
-    .from(BUCKETS.avatars)
-    .createSignedUrls(unique, SIGNED_URL_TTL_SECONDS);
-
-  const signed = new Map<string, string>();
-  if (error || !data) return signed;
-
-  for (const entry of data) {
-    if (entry.path && entry.signedUrl) signed.set(entry.path, entry.signedUrl);
-  }
-  return signed;
-}
 
 export interface Couple {
   id: string;

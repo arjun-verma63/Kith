@@ -1,5 +1,3 @@
-"use client";
-
 import { PresenceEmber } from "@/components/ui/presence-ember";
 import { AuthCta } from "@/features/landing/components/auth-cta";
 import { Reveal } from "@/features/landing/components/reveal";
@@ -7,6 +5,9 @@ import { FINAL_CTA, FOOTER, NAV_LINKS } from "@/features/landing/copy";
 import { KithMark } from "@/components/ui/icon";
 
 /**
+ * Composes `Reveal` and `AuthCta`, both client components. This one is markup,
+ * so it renders on the server.
+ *
  * The close.
  *
  * The only centred composition on the page — which is exactly why it lands.
