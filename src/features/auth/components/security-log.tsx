@@ -19,10 +19,26 @@ const LABELS: Record<string, string> = {
   "mfa.disabled": "Turned off two-factor authentication",
   "mfa.challenge_failed": "A code was rejected",
   "mfa.challenge_passed": "Signed in with a code",
+  "password.changed": "Changed the password",
+  "password.change_failed": "A password change was refused",
+  "sessions.revoked_others": "Signed out every other device",
+  "account.deleted": "Deleted the account",
+  "account.delete_failed": "An account deletion was refused",
 };
 
-/** Only the ones worth noticing get colour. */
-const ALARMING = new Set(["mfa.challenge_failed", "mfa.disabled"]);
+/**
+ * The ones worth a second look.
+ *
+ * Every entry here is a failed attempt or a reduction in security — the two
+ * shapes of "somebody may have half of what they need". Successes stay quiet so
+ * that the coloured lines mean something.
+ */
+const ALARMING = new Set([
+  "mfa.challenge_failed",
+  "mfa.disabled",
+  "password.change_failed",
+  "account.delete_failed",
+]);
 
 export function SecurityLog({ events }: { events: SecurityEventRow[] }) {
   if (events.length === 0) return null;

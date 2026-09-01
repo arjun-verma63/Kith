@@ -618,6 +618,7 @@ export type Database = {
           updated_at: string;
           birthday: string | null;
           username_changed_at: string | null;
+          deleted_at: string | null;
         };
         Insert: {
           id: string;
@@ -635,6 +636,7 @@ export type Database = {
           updated_at?: string;
           birthday?: string | null;
           username_changed_at?: string | null;
+          deleted_at?: string | null;
         };
         Update: {
           id?: string;
@@ -652,6 +654,7 @@ export type Database = {
           updated_at?: string;
           birthday?: string | null;
           username_changed_at?: string | null;
+          deleted_at?: string | null;
         };
         Relationships: [];
       };
@@ -737,6 +740,12 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: number;
       };
+      anonymise_account: {
+        Args: {
+          p_user_id: string;
+        };
+        Returns: undefined;
+      };
       answer_call: {
         Args: {
           p_call_id: string;
@@ -769,6 +778,12 @@ export type Database = {
         Args: {
           target_conversation: string;
           target_user: string;
+        };
+        Returns: boolean;
+      };
+      can_call_conversation: {
+        Args: {
+          p_conversation_id: string;
         };
         Returns: boolean;
       };
@@ -1205,6 +1220,17 @@ export type Database = {
             my_placement: number | null;
             created_at: string | null;
             ended_at: string | null;
+        }[];
+      };
+      list_my_sessions: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+            id: string | null;
+            created_at: string | null;
+            refreshed_at: string | null;
+            user_agent: string | null;
+            ip: string | null;
+            aal: string | null;
         }[];
       };
       list_notifications: {

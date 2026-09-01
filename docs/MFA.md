@@ -114,6 +114,9 @@ lockout risk — lose the phone _and_ need a password reset and you need §6.
 | Sign-in challenge                    | `src/app/(auth)/verify-2fa/page.tsx`            |
 | Admin removal                        | `scripts/mfa-reset.mjs`                         |
 
+The rest of the Security page — password, sessions, privacy, deletion — is in
+[ACCOUNT.md](ACCOUNT.md).
+
 Three layers ask "does this session owe a factor", and `deriveMfaState` is the
 single answer all three use, so they cannot drift.
 

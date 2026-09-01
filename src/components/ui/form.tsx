@@ -51,11 +51,33 @@ export function FormBanner({ state }: { state: FormState }) {
  * of sync with the submission — and it keeps working if JavaScript is slow to
  * arrive, because the form posts to the action either way.
  */
-export function SubmitButton({ children, idleLabel }: { children?: ReactNode; idleLabel: string }) {
+export function SubmitButton({
+  children,
+  idleLabel,
+  disabled = false,
+}: {
+  children?: ReactNode;
+  idleLabel: string;
+  /**
+   * Held closed until the form says it may be pressed.
+   *
+   * For a confirmation that has not been typed correctly yet — the button being
+   * visibly unavailable is the point, rather than letting the press through and
+   * answering with a field error.
+   */
+  disabled?: boolean;
+}) {
   const { pending } = useFormStatus();
 
   return (
-    <Button type="submit" variant="primary" size="lg" fullWidth loading={pending}>
+    <Button
+      type="submit"
+      variant="primary"
+      size="lg"
+      fullWidth
+      loading={pending}
+      disabled={disabled}
+    >
       {children ?? idleLabel}
     </Button>
   );

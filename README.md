@@ -32,46 +32,47 @@ served from our own origin.
 
 ## Scripts
 
-| Script                       | What it does                                              |
-| ---------------------------- | --------------------------------------------------------- |
-| `npm run dev`                | Development server (Turbopack) at `localhost:3000`        |
-| `npm run build`              | Production build                                          |
-| `npm start`                  | Serve a production build                                  |
-| `npm run typecheck`          | `tsc --noEmit` against the strict config                  |
-| `npm run lint`               | ESLint, including the architectural import boundaries     |
-| `npm run lint:fix`           | ESLint with autofix                                       |
-| `npm run format`             | Prettier write (sorts Tailwind classes)                   |
-| `npm run format:check`       | Prettier check — what CI runs                             |
-| `npm run check`              | `typecheck` + `lint` + `format:check`. Run before pushing |
-| `npm run clean`              | Remove `.next` and the build cache                        |
-| `npm run check:bundle`       | Scan the built client bundle for server-only secrets      |
-| `npm run db:start`           | Local Supabase stack (needs Docker)                       |
-| `npm run db:reset`           | Drop and replay every migration                           |
-| `npm run db:diff`            | Capture local schema changes as a migration               |
-| `npm run mfa:reset`          | Remove an account's 2FA factors (service role, see below) |
-| `npm run test`               | Every suite below, in order                               |
-| `npm run db:test`            | Schema and RLS                                            |
-| `npm run auth:test`          | Redirect rules, validation, invite redemption             |
-| `npm run mfa:test`           | Two-factor: the data-layer gate, routing, RFC 6238        |
-| `npm run profile:test`       | Profile triggers, username rules, storage policies        |
-| `npm run friends:test`       | Requests, friendships, the constraints behind them        |
-| `npm run presence:test`      | The presence resolution rule and its channel policy       |
-| `npm run messages:test`      | Membership, pagination, reactions, sanitisation           |
-| `npm run notifications:test` | Fan-out, collapsing, read state                           |
-| `npm run webrtc:test`        | Two real peers connecting, and perfect negotiation        |
-| `npm run calls:test`         | The call lifecycle and who may do what to it              |
-| `npm run call-session:test`  | Two sessions, one call, end to end                        |
-| `npm run screen-share:test`  | Capture, stopping, and the one-sender rule                |
-| `npm run turn:test`          | Relay credentials, transports, and the route              |
-| `npm run games:test`         | The lobby, turn enforcement, and who may write state      |
-| `npm run wyr:test`           | Would You Rather: secrecy, scoring, people leaving        |
-| `npm run wkm:test`           | Who Knows Me Better?: two secrets, rotation, voids        |
-| `npm run draw:test`          | Draw & Guess, and the canvas wire protocol                |
-| `npm run couple:test`        | Couple mode: privacy, consent, the reveal gate            |
-| `npm run howwell:test`       | How Well Do You Know Me?, and the couple game scope       |
-| `npm run guess:test`         | Guess My Answer, and game configuration                   |
-| `npm run db:types`           | Regenerate `src/types/database.ts` from the migrations    |
-| `npm run db:types:check`     | Fail if the generated types have drifted (for CI)         |
+| Script                       | What it does                                               |
+| ---------------------------- | ---------------------------------------------------------- |
+| `npm run dev`                | Development server (Turbopack) at `localhost:3000`         |
+| `npm run build`              | Production build                                           |
+| `npm start`                  | Serve a production build                                   |
+| `npm run typecheck`          | `tsc --noEmit` against the strict config                   |
+| `npm run lint`               | ESLint, including the architectural import boundaries      |
+| `npm run lint:fix`           | ESLint with autofix                                        |
+| `npm run format`             | Prettier write (sorts Tailwind classes)                    |
+| `npm run format:check`       | Prettier check — what CI runs                              |
+| `npm run check`              | `typecheck` + `lint` + `format:check`. Run before pushing  |
+| `npm run clean`              | Remove `.next` and the build cache                         |
+| `npm run check:bundle`       | Scan the built client bundle for server-only secrets       |
+| `npm run db:start`           | Local Supabase stack (needs Docker)                        |
+| `npm run db:reset`           | Drop and replay every migration                            |
+| `npm run db:diff`            | Capture local schema changes as a migration                |
+| `npm run mfa:reset`          | Remove an account's 2FA factors (service role, see below)  |
+| `npm run test`               | Every suite below, in order                                |
+| `npm run db:test`            | Schema and RLS                                             |
+| `npm run auth:test`          | Redirect rules, validation, invite redemption              |
+| `npm run mfa:test`           | Two-factor: the data-layer gate, routing, RFC 6238         |
+| `npm run account:test`       | Deletion, sessions, privacy controls, what a page may show |
+| `npm run profile:test`       | Profile triggers, username rules, storage policies         |
+| `npm run friends:test`       | Requests, friendships, the constraints behind them         |
+| `npm run presence:test`      | The presence resolution rule and its channel policy        |
+| `npm run messages:test`      | Membership, pagination, reactions, sanitisation            |
+| `npm run notifications:test` | Fan-out, collapsing, read state                            |
+| `npm run webrtc:test`        | Two real peers connecting, and perfect negotiation         |
+| `npm run calls:test`         | The call lifecycle and who may do what to it               |
+| `npm run call-session:test`  | Two sessions, one call, end to end                         |
+| `npm run screen-share:test`  | Capture, stopping, and the one-sender rule                 |
+| `npm run turn:test`          | Relay credentials, transports, and the route               |
+| `npm run games:test`         | The lobby, turn enforcement, and who may write state       |
+| `npm run wyr:test`           | Would You Rather: secrecy, scoring, people leaving         |
+| `npm run wkm:test`           | Who Knows Me Better?: two secrets, rotation, voids         |
+| `npm run draw:test`          | Draw & Guess, and the canvas wire protocol                 |
+| `npm run couple:test`        | Couple mode: privacy, consent, the reveal gate             |
+| `npm run howwell:test`       | How Well Do You Know Me?, and the couple game scope        |
+| `npm run guess:test`         | Guess My Answer, and game configuration                    |
+| `npm run db:types`           | Regenerate `src/types/database.ts` from the migrations     |
+| `npm run db:types:check`     | Fail if the generated types have drifted (for CI)          |
 
 ## Structure
 
@@ -185,6 +186,14 @@ table (migration 0024), not the `/verify-2fa` screen. Recovery is deliberately
 honest about its limits — TOTP has no "forgot my phone" link and Supabase Auth
 does not issue recovery codes, so the answers are a second authenticator and
 `npm run mfa:reset`.
+
+**[docs/ACCOUNT.md](docs/ACCOUNT.md)** covers the rest of the Security page —
+password change, sessions, privacy controls, and account deletion. The decision
+worth knowing about is that deleting an account **scrubs the profile in place
+rather than dropping the row**: `profiles.id` cascades from `auth.users`, and two
+of the onward edges are other people's data (every game they hosted, and the
+couple record with both partners' answers in it). One person leaving should not
+delete five other people's evenings.
 
 **[docs/SUPABASE.md](docs/SUPABASE.md) and [docs/TURN.md](docs/TURN.md) are the credential maps** — what each key can do,
 where it belongs per environment, and what to do if one leaks.

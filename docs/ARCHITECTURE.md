@@ -89,16 +89,16 @@ both submit — enforced in RLS, not UI), `couple_milestones`, `couple_notes`.
 
 ## 5. Security
 
-| Layer         | Control                                                                                                 |
-| ------------- | ------------------------------------------------------------------------------------------------------- |
-| Edge          | Security headers; CSP with a per-request nonce from Phase 2                                             |
-| Entry         | **Invite-gated signup.** Open registration on a six-person private app is the wrong default             |
-| Identity      | Supabase Auth, mandatory email verification, TOTP MFA (AAL2)                                            |
-| Session       | httpOnly/secure/sameSite cookies via `@supabase/ssr`, refreshed in middleware                           |
-| Authorization | RLS on every table, `FORCE ROW LEVEL SECURITY`, deny by default                                         |
-| Input         | Zod at every boundary — actions, route handlers, **and realtime payloads**                              |
-| Abuse         | Postgres token-bucket rate limits on sends, requests, calls, invites, resets                            |
-| Audit         | `security_events` — MFA enable/disable/failed-challenge written; login, password, block, report pending |
+| Layer         | Control                                                                                                         |
+| ------------- | --------------------------------------------------------------------------------------------------------------- |
+| Edge          | Security headers; CSP with a per-request nonce from Phase 2                                                     |
+| Entry         | **Invite-gated signup.** Open registration on a six-person private app is the wrong default                     |
+| Identity      | Supabase Auth, mandatory email verification, TOTP MFA (AAL2)                                                    |
+| Session       | httpOnly/secure/sameSite cookies via `@supabase/ssr`, refreshed in middleware                                   |
+| Authorization | RLS on every table, `FORCE ROW LEVEL SECURITY`, deny by default                                                 |
+| Input         | Zod at every boundary — actions, route handlers, **and realtime payloads**                                      |
+| Abuse         | Postgres token-bucket rate limits on sends, requests, calls, invites, resets                                    |
+| Audit         | `security_events` — MFA, password change, session revocation and deletion written; login, block, report pending |
 
 ### RLS rules that prevent the known failures
 
@@ -114,6 +114,13 @@ both submit — enforced in RLS, not UI), `couple_milestones`, `couple_notes`.
   privilege-escalation vector.
 - Blocks are a first-class predicate in messages, requests, calls, invites and profile
   visibility. A blocked user must fail at the database, not at the UI.
+- **Every privacy setting is read by a policy or a SECURITY DEFINER gate**, and
+  `PRIVACY_CONTROLS` names the function for each one so a switch cannot ship
+  without an enforcer. `who_can_call` sat unread from migration 0002 until 0025;
+  a control that controls nothing is a promise the database does not keep.
+- **Account deletion anonymises rather than cascades** (migration 0025). See
+  [ACCOUNT.md](ACCOUNT.md) §4 for the two edges that make a hard delete somebody
+  else's problem.
 - **Two-factor is enforced in RLS, not in routing** (migration 0024). The plan said
   "sensitive operations carry `aal2`"; what shipped is stronger and simpler — a
   restrictive `mfa_required` policy on _every_ table, gating any user who has a

@@ -11,11 +11,13 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const next = safeRedirect(typeof params.next === "string" ? params.next : null);
 
   const lead =
-    params.signedout === "1"
-      ? "Signed out. The room is still here when you want it."
-      : params.reset === "1"
-        ? "Password changed. Sign in with the new one."
-        : "Welcome back.";
+    params.deleted === "1"
+      ? "Your account is gone. Thanks for being here."
+      : params.signedout === "1"
+        ? "Signed out. The room is still here when you want it."
+        : params.reset === "1"
+          ? "Password changed. Sign in with the new one."
+          : "Welcome back.";
 
   return (
     <AuthShell title="Sign in" lead={lead}>

@@ -171,6 +171,16 @@
     box-shadow: var(--focus-halo);
   }
 
+  /* For a label wrapping a visually hidden input — a segmented radio, where the
+     control itself is off-screen and the label IS the control as far as anybody
+     looking at the page is concerned. Without this, tabbing through the group
+     moves focus invisibly. */
+  .control-focus-within:has(:focus-visible) {
+    outline: none;
+    border-color: var(--focus-ring);
+    box-shadow: var(--focus-halo);
+  }
+
   .input {
     width: 100%;
     background-color: var(--surface-sunken);

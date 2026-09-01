@@ -95,6 +95,27 @@ const SUPABASE_STUBS = /* sql */ `
 
   create index mfa_factors_user_idx on auth.mfa_factors (user_id);
 
+  -- Sessions, as GoTrue keeps them.
+  --
+  -- Shaped after the real table because migration 0025's list_my_sessions reads
+  -- it directly. Supabase's client library has no "list my sessions" call, so
+  -- this is the one place KITH touches a table it does not own — the function
+  -- guards with to_regclass and swallows undefined_column for exactly that
+  -- reason, and both of those paths are asserted in the suite.
+  create table auth.sessions (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references auth.users (id) on delete cascade,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    refreshed_at timestamptz,
+    user_agent text,
+    ip inet,
+    aal text default 'aal1',
+    not_after timestamptz
+  );
+
+  create index sessions_user_idx on auth.sessions (user_id);
+
   -- Approximation of realtime.messages, enough for migration 0009 to create its
   -- policies against.
   create table realtime.messages (

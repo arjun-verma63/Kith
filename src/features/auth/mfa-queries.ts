@@ -64,7 +64,14 @@ export async function getMfaStatus(): Promise<MfaState | null> {
 
 /* ------------------------------------------------------------------- audit */
 
-/** The events this app writes. A closed set, so the log stays greppable. */
+/**
+ * The events this app writes. A closed set, so the log stays greppable and the
+ * settings page can be sure it has a label for everything it will be handed.
+ *
+ * Failures are recorded as well as successes, and that is most of the point: a
+ * rejected code or a wrong password is the signal that somebody else has half of
+ * what they need.
+ */
 export type SecurityEvent =
   | "mfa.enroll_started"
   | "mfa.enroll_cancelled"
@@ -72,7 +79,12 @@ export type SecurityEvent =
   | "mfa.factor_removed"
   | "mfa.disabled"
   | "mfa.challenge_failed"
-  | "mfa.challenge_passed";
+  | "mfa.challenge_passed"
+  | "password.changed"
+  | "password.change_failed"
+  | "sessions.revoked_others"
+  | "account.deleted"
+  | "account.delete_failed";
 
 export interface SecurityEventRow {
   id: string;
@@ -132,14 +144,17 @@ export async function recordSecurityEvent(
  *
  * Read with the caller's client, so the `security_events_select_own` policy is
  * what limits it to their rows rather than a `where` clause we could forget.
+ *
+ * Unfiltered by prefix: the table is closed to the API for writes and only this
+ * application appends to it, so everything in it is something the account holder
+ * should see. Filtering to `mfa.%` was right when that was all there was.
  */
-export async function listSecurityEvents(limit = 8): Promise<SecurityEventRow[]> {
+export async function listSecurityEvents(limit = 10): Promise<SecurityEventRow[]> {
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("security_events")
     .select("id, event, created_at, metadata")
-    .like("event", "mfa.%")
     .order("created_at", { ascending: false })
     .limit(limit);
 
