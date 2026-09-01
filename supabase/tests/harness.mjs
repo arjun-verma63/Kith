@@ -74,6 +74,27 @@ const SUPABASE_STUBS = /* sql */ `
     select nullif(current_setting('request.jwt.claim.role', true), '');
   $fn$;
 
+  -- MFA factors, as GoTrue keeps them.
+  --
+  -- Shaped after the real table because migration 0024's gate reads it directly:
+  -- one row per enrolled authenticator, with status flipping to 'verified' the
+  -- first time a code from it is accepted. The real table also holds the TOTP
+  -- secret, which is exactly why the authenticated role has no grant on it here
+  -- either — mfa_satisfied() is SECURITY DEFINER for that reason, and a stub
+  -- that handed the role a grant would let a broken policy pass.
+  create table auth.mfa_factors (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references auth.users (id) on delete cascade,
+    friendly_name text,
+    factor_type text not null default 'totp',
+    status text not null default 'unverified',
+    secret text,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+  );
+
+  create index mfa_factors_user_idx on auth.mfa_factors (user_id);
+
   -- Approximation of realtime.messages, enough for migration 0009 to create its
   -- policies against.
   create table realtime.messages (
@@ -244,11 +265,27 @@ export async function freshDatabase() {
  * make it pass for the wrong reason.
  */
 export async function asUser(db, userId, sql, params = []) {
+  return asUserAtAal(db, userId, "aal1", sql, params);
+}
+
+/**
+ * The same, at a chosen assurance level.
+ *
+ * `aal1` is a password session; `aal2` is one where a second factor has been
+ * accepted this session. Supabase puts that in the `aal` claim of the access
+ * token, which is where migration 0024's gate reads it from — so this is the
+ * whole difference between a stolen password and a stolen password plus a phone.
+ *
+ * `asUser` defaults to aal1 because that is what an ordinary session is, and
+ * because it means every suite written before two-factor existed keeps testing
+ * the case that matters: somebody with no factor enrolled must be unaffected.
+ */
+export async function asUserAtAal(db, userId, aal, sql, params = []) {
   await db.exec("begin");
   try {
     await db.query("select set_config('request.jwt.claim.sub', $1, true)", [userId]);
     await db.query("select set_config('request.jwt.claims', $1, true)", [
-      JSON.stringify({ sub: userId, role: "authenticated", aal: "aal1" }),
+      JSON.stringify({ sub: userId, role: "authenticated", aal }),
     ]);
     await db.exec("set local role authenticated");
     const result = await db.query(sql, params);

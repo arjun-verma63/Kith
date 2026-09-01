@@ -48,9 +48,11 @@ served from our own origin.
 | `npm run db:start`           | Local Supabase stack (needs Docker)                       |
 | `npm run db:reset`           | Drop and replay every migration                           |
 | `npm run db:diff`            | Capture local schema changes as a migration               |
+| `npm run mfa:reset`          | Remove an account's 2FA factors (service role, see below) |
 | `npm run test`               | Every suite below, in order                               |
 | `npm run db:test`            | Schema and RLS                                            |
 | `npm run auth:test`          | Redirect rules, validation, invite redemption             |
+| `npm run mfa:test`           | Two-factor: the data-layer gate, routing, RFC 6238        |
 | `npm run profile:test`       | Profile triggers, username rules, storage policies        |
 | `npm run friends:test`       | Requests, friendships, the constraints behind them        |
 | `npm run presence:test`      | The presence resolution rule and its channel policy       |
@@ -174,6 +176,15 @@ Two guards worth knowing about:
   publishing full database access in the browser bundle.
 - `npm run build && npm run check:bundle` scans the built client bundle for the value of
   every server-only secret and fails if one appears. Run it in CI.
+
+**[docs/MFA.md](docs/MFA.md)** covers two-factor authentication, including the
+one thing worth knowing before reading the code: a redirect is not a second
+factor. A password login produces a working access token _before_ any code is
+entered, so the enforcement is a restrictive Row Level Security policy on every
+table (migration 0024), not the `/verify-2fa` screen. Recovery is deliberately
+honest about its limits — TOTP has no "forgot my phone" link and Supabase Auth
+does not issue recovery codes, so the answers are a second authenticator and
+`npm run mfa:reset`.
 
 **[docs/SUPABASE.md](docs/SUPABASE.md) and [docs/TURN.md](docs/TURN.md) are the credential maps** — what each key can do,
 where it belongs per environment, and what to do if one leaks.

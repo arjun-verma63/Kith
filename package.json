@@ -25,8 +25,10 @@
     "db:push": "npx supabase db push",
     "db:types": "node scripts/generate-database-types.mjs",
     "db:types:check": "node scripts/check-database-types.mjs",
+    "mfa:reset": "node scripts/mfa-reset.mjs",
     "db:test": "node supabase/tests/rls.test.mjs",
     "auth:test": "node supabase/tests/auth.test.mjs",
+    "mfa:test": "node supabase/tests/mfa.test.mjs",
     "profile:test": "node supabase/tests/profile.test.mjs",
     "friends:test": "node supabase/tests/friends.test.mjs",
     "presence:test": "node supabase/tests/presence.test.mjs",
@@ -44,7 +46,7 @@
     "howwell:test": "node supabase/tests/how-well.test.mjs",
     "guess:test": "node supabase/tests/guess-my-answer.test.mjs",
     "webrtc:test": "node supabase/tests/webrtc.test.mjs",
-    "test": "npm run db:test && npm run auth:test && npm run profile:test && npm run friends:test && npm run presence:test && npm run messages:test && npm run notifications:test && npm run webrtc:test && npm run calls:test && npm run call-session:test && npm run screen-share:test && npm run turn:test && npm run games:test && npm run wyr:test && npm run wkm:test && npm run draw:test && npm run couple:test && npm run howwell:test && npm run guess:test"
+    "test": "npm run db:test && npm run auth:test && npm run mfa:test && npm run profile:test && npm run friends:test && npm run presence:test && npm run messages:test && npm run notifications:test && npm run webrtc:test && npm run calls:test && npm run call-session:test && npm run screen-share:test && npm run turn:test && npm run games:test && npm run wyr:test && npm run wkm:test && npm run draw:test && npm run couple:test && npm run howwell:test && npm run guess:test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

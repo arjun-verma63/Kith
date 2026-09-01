@@ -156,6 +156,13 @@ response `updateSession()` produced**, or copy its cookies onto whatever redirec
 replaces it. Constructing a fresh `NextResponse` silently discards the refreshed
 tokens.
 
+It also reads the session's assurance level, and the order of the two calls
+matters: `getAuthenticatorAssuranceLevel()` decodes the `aal` claim out of the
+access token locally, which is only trustworthy because `getUser()` revalidated
+that exact token against the Auth server a few lines earlier. Swapping them turns
+the check into a formality. Routing is not the enforcement either way — see
+[MFA.md](MFA.md).
+
 ---
 
 ## Rotation

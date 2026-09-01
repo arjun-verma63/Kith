@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { Avatar } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { KithMark } from "@/components/ui/icon";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { signOutAction } from "@/features/auth/actions";
@@ -120,6 +120,19 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
                 />
 
                 <ThemeToggle className="hidden sm:inline-flex" />
+
+                {/* Settings → Security is where two-factor lives, so there has
+                    to be a way to reach settings that is not "edit your
+                    profile". Icon-only: the header is full and this is a
+                    destination people look for rather than notice. */}
+                <ButtonLink
+                  href="/settings/profile"
+                  variant="ghost"
+                  size="sm"
+                  iconOnly
+                  icon="settings"
+                  aria-label="Settings"
+                />
 
                 <Link
                   href={`/u/${profile.username}`}

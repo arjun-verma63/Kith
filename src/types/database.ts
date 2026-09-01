@@ -1235,6 +1235,10 @@ export type Database = {
         };
         Returns: number;
       };
+      mfa_satisfied: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
       open_couple_prompt: {
         Args: {
           p_couple_id: string;

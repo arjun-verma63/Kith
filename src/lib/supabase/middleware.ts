@@ -30,13 +30,21 @@ import type { User } from "@supabase/supabase-js";
 export async function updateSession(request: NextRequest): Promise<{
   response: NextResponse;
   user: User | null;
+  /**
+   * The account has a verified second factor that this session has not proved.
+   *
+   * Read here rather than in a page because the routing decision needs it on
+   * every request, and because a page cannot rescue a request that has already
+   * been allowed to render.
+   */
+  mfaChallengeRequired: boolean;
 }> {
   let response = NextResponse.next({ request });
 
   // The landing page has no database in it. Until a Supabase project is wired
   // up, middleware should pass traffic through rather than 500 the whole site.
   if (!isSupabaseConfigured()) {
-    return { response, user: null };
+    return { response, user: null, mfaChallengeRequired: false };
   }
 
   const env = getSupabasePublicEnv();
@@ -78,11 +86,32 @@ export async function updateSession(request: NextRequest): Promise<{
       data: { user },
     } = await supabase.auth.getUser();
 
-    return { response, user };
+    if (!user) return { response, user: null, mfaChallengeRequired: false };
+
+    /*
+     * Assurance level.
+     *
+     * `getAuthenticatorAssuranceLevel` is a local read: it decodes the `aal`
+     * claim from the access token in the cookie and compares it against the
+     * factors on the user record. That is only trustworthy because `getUser()`
+     * just revalidated that exact token against the Auth server, a few lines up
+     * — the claim is being read from a string that has been checked, not from an
+     * unverified cookie. Reversing these two calls would quietly turn this into
+     * a formality.
+     *
+     * No extra round trip, which matters: this runs on every navigation.
+     */
+    const { data: assurance } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+    return {
+      response,
+      user,
+      mfaChallengeRequired: assurance?.nextLevel === "aal2" && assurance.currentLevel !== "aal2",
+    };
   } catch (error) {
     console.error("[kith:auth] session refresh failed", {
       message: error instanceof Error ? error.message : "unknown",
     });
-    return { response, user: null };
+    return { response, user: null, mfaChallengeRequired: false };
   }
 }

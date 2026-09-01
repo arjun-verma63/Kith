@@ -89,16 +89,16 @@ both submit — enforced in RLS, not UI), `couple_milestones`, `couple_notes`.
 
 ## 5. Security
 
-| Layer         | Control                                                                                     |
-| ------------- | ------------------------------------------------------------------------------------------- |
-| Edge          | Security headers; CSP with a per-request nonce from Phase 2                                 |
-| Entry         | **Invite-gated signup.** Open registration on a six-person private app is the wrong default |
-| Identity      | Supabase Auth, mandatory email verification, TOTP MFA (AAL2)                                |
-| Session       | httpOnly/secure/sameSite cookies via `@supabase/ssr`, refreshed in middleware               |
-| Authorization | RLS on every table, `FORCE ROW LEVEL SECURITY`, deny by default                             |
-| Input         | Zod at every boundary — actions, route handlers, **and realtime payloads**                  |
-| Abuse         | Postgres token-bucket rate limits on sends, requests, calls, invites, resets                |
-| Audit         | `security_events` on login, MFA change, password change, block, report                      |
+| Layer         | Control                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------- |
+| Edge          | Security headers; CSP with a per-request nonce from Phase 2                                             |
+| Entry         | **Invite-gated signup.** Open registration on a six-person private app is the wrong default             |
+| Identity      | Supabase Auth, mandatory email verification, TOTP MFA (AAL2)                                            |
+| Session       | httpOnly/secure/sameSite cookies via `@supabase/ssr`, refreshed in middleware                           |
+| Authorization | RLS on every table, `FORCE ROW LEVEL SECURITY`, deny by default                                         |
+| Input         | Zod at every boundary — actions, route handlers, **and realtime payloads**                              |
+| Abuse         | Postgres token-bucket rate limits on sends, requests, calls, invites, resets                            |
+| Audit         | `security_events` — MFA enable/disable/failed-challenge written; login, password, block, report pending |
 
 ### RLS rules that prevent the known failures
 
@@ -114,8 +114,13 @@ both submit — enforced in RLS, not UI), `couple_milestones`, `couple_notes`.
   privilege-escalation vector.
 - Blocks are a first-class predicate in messages, requests, calls, invites and profile
   visibility. A blocked user must fail at the database, not at the UI.
-- Sensitive operations carry `(select auth.jwt()->>'aal') = 'aal2'`. UI gating alone is
-  theatre.
+- **Two-factor is enforced in RLS, not in routing** (migration 0024). The plan said
+  "sensitive operations carry `aal2`"; what shipped is stronger and simpler — a
+  restrictive `mfa_required` policy on _every_ table, gating any user who has a
+  verified factor. The reason is that `signInWithPassword` returns a working
+  access token before any code is entered, and that token can be pointed straight
+  at PostgREST where no redirect exists. UI gating alone is theatre. See
+  [MFA.md](MFA.md); the "every table carries it" invariant is in `rls.test.mjs`.
 - pgTAP suite asserting the negative cases per table, in CI on every migration.
 
 **Secrets.** `NEXT_PUBLIC_*` is the anon key and URL only — both are designed to be

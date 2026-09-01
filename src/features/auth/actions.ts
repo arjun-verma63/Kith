@@ -160,6 +160,25 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
     redirect("/verify-email");
   }
 
+  /*
+   * A password is not the whole login when a second factor is enrolled.
+   *
+   * `signInWithPassword` has already created a real session at this point — it
+   * is not a half-session or a pending one, it is a working access token that
+   * happens to say `aal1`. Sending the browser to the challenge is the polite
+   * half of what happens next; migration 0024 is the half that means the token
+   * cannot be taken elsewhere and used.
+   *
+   * Read from the freshly returned user rather than a second round trip: the
+   * factors are on the record we already have.
+   */
+  const enrolled = (data.user.factors ?? []).some((factor) => factor.status === "verified");
+
+  if (enrolled) {
+    const next = safeRedirect(parsed.data.redirectTo ?? null);
+    redirect(next ? `/verify-2fa?next=${encodeURIComponent(next)}` : "/verify-2fa");
+  }
+
   redirect(safeRedirect(parsed.data.redirectTo ?? null) ?? "/");
 }
 

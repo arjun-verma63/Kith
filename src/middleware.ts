@@ -27,12 +27,13 @@ import { updateSession } from "@/lib/supabase/middleware";
  * bug here is a bad redirect, not a data leak.
  */
 export async function middleware(request: NextRequest) {
-  const { response, user } = await updateSession(request);
+  const { response, user, mfaChallengeRequired } = await updateSession(request);
 
   const decision = decideRedirect({
     pathname: request.nextUrl.pathname,
     userId: user?.id ?? null,
     emailVerified: Boolean(user?.email_confirmed_at),
+    mfaChallengeRequired,
   });
 
   if (!decision) return response;

@@ -825,6 +825,27 @@ await expectEmpty(
 );
 
 /*
+ * Two-factor authentication is only real if it cannot be skipped by talking to
+ * PostgREST directly, and that means the restrictive gate from migration 0024
+ * has to be on EVERY table. A new table without it is a table that an aal1
+ * session belonging to an enrolled account can read — which is the whole attack
+ * the feature exists to stop, reintroduced one migration at a time.
+ */
+await expectEmpty(
+  "every public table carries the mfa_required gate",
+  `select c.relname from pg_class c
+     join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind = 'r'
+      and not exists (
+        select 1 from pg_policy p
+        where p.polrelid = c.oid
+          and p.polname = 'mfa_required'
+          and not p.polpermissive
+      )`,
+  (r) => r.relname,
+);
+
+/*
  * An unindexed foreign key turns every parent delete into a sequential scan of
  * the child, and is the usual cause of a cascade that mysteriously takes
  * minutes.

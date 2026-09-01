@@ -13,12 +13,9 @@ export default async function ProfileSettingsPage() {
   if (!profile) redirect("/login");
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-14 sm:px-10">
-      <div className="mb-10 flex items-end justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <span className="label text-fg-faint">Settings</span>
-          <h1 className="display text-d-xs text-fg-loud">Your profile</h1>
-        </div>
+    <>
+      <div className="mb-8 flex items-end justify-between gap-4">
+        <h1 className="display text-d-xs text-fg-loud">Your profile</h1>
 
         <ButtonLink href={`/u/${profile.username}`} variant="ghost" size="sm">
           View as others see it
@@ -26,6 +23,6 @@ export default async function ProfileSettingsPage() {
       </div>
 
       <ProfileForm profile={profile} />
-    </div>
+    </>
   );
 }
