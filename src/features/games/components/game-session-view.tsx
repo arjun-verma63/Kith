@@ -439,7 +439,12 @@ function Results({ session, view }: { session: GameSession; view: GameView }) {
       {abandoned ? (
         <p className="text-sm text-fg-dim">This game was abandoned before it finished.</p>
       ) : ownResult ? (
-        <GameResult gameKey={session.gameKey} publicState={view.publicState} />
+        <GameResult
+          gameKey={session.gameKey}
+          publicState={view.publicState}
+          players={session.players}
+          mySeat={session.mySeat}
+        />
       ) : winners.length === 0 ? (
         <p className="heading text-md text-fg-loud">A draw.</p>
       ) : (

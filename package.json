@@ -42,8 +42,9 @@
     "draw:test": "node supabase/tests/draw-guess.test.mjs",
     "couple:test": "node supabase/tests/couple.test.mjs",
     "howwell:test": "node supabase/tests/how-well.test.mjs",
+    "guess:test": "node supabase/tests/guess-my-answer.test.mjs",
     "webrtc:test": "node supabase/tests/webrtc.test.mjs",
-    "test": "npm run db:test && npm run auth:test && npm run profile:test && npm run friends:test && npm run presence:test && npm run messages:test && npm run notifications:test && npm run webrtc:test && npm run calls:test && npm run call-session:test && npm run screen-share:test && npm run turn:test && npm run games:test && npm run wyr:test && npm run wkm:test && npm run draw:test && npm run couple:test && npm run howwell:test"
+    "test": "npm run db:test && npm run auth:test && npm run profile:test && npm run friends:test && npm run presence:test && npm run messages:test && npm run notifications:test && npm run webrtc:test && npm run calls:test && npm run call-session:test && npm run screen-share:test && npm run turn:test && npm run games:test && npm run wyr:test && npm run wkm:test && npm run draw:test && npm run couple:test && npm run howwell:test && npm run guess:test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

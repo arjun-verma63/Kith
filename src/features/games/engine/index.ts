@@ -16,6 +16,7 @@
  */
 
 import "@/features/games/engine/games/draw-guess";
+import "@/features/games/engine/games/guess-my-answer";
 import "@/features/games/engine/games/how-well";
 import "@/features/games/engine/games/who-knows-me";
 import "@/features/games/engine/games/would-you-rather";

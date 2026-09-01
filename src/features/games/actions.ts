@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { resyncSession, startSession, submitMove } from "@/features/games/engine/runtime";
 import { getGameSession, type GameSession } from "@/features/games/queries";
+import { parseGameConfig } from "@/lib/games/config";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 /**
@@ -44,6 +45,7 @@ function explain(message: string | undefined): string {
   if (text.includes("not_in_lobby")) return "That game is not in its lobby any more.";
   if (text.includes("not_a_player")) return "You are not in that game.";
   if (text.includes("not_host")) return "Only the host can start the game.";
+  if (text.includes("config_too_large")) return "Those settings are too big.";
   if (text.includes("not_permitted")) return "You cannot do that.";
   return "Something went wrong.";
 }
@@ -146,9 +148,15 @@ export async function rematchAction(sessionId: string): Promise<GameActionResult
   if (previous.mySeat === null) return { ok: false, reason: "You were not in that game." };
 
   // A session belongs to a conversation OR a couple, never both, so a rematch
-  // reopens in whichever one it was played in.
+  // reopens in whichever one it was played in — with the same settings, because
+  // "play again" means this game again, not this game with different questions.
   if (previous.coupleId) {
-    return createCoupleGameAction(previous.coupleId, previous.gameKey, previous.id);
+    return createCoupleGameAction(
+      previous.coupleId,
+      previous.gameKey,
+      previous.config,
+      previous.id,
+    );
   }
   if (previous.conversationId) {
     return createGameAction(previous.conversationId, previous.gameKey, previous.id);
@@ -167,6 +175,7 @@ export async function rematchAction(sessionId: string): Promise<GameActionResult
 export async function createCoupleGameAction(
   coupleId: string,
   key: string,
+  config?: unknown,
   rematchOf?: string,
 ): Promise<GameActionResult> {
   const user = await getCurrentUser();
@@ -182,6 +191,9 @@ export async function createCoupleGameAction(
   const { data, error } = await supabase.rpc("create_couple_game", {
     p_couple_id: couple.data,
     p_game_key: parsedKey.data,
+    // Whitelisted here rather than trusted: this object arrives from a browser
+    // and the database stores it without looking inside.
+    p_config: parseGameConfig(parsedKey.data, config),
     p_rematch_of: rematchOf && uuid.safeParse(rematchOf).success ? rematchOf : null,
   });
 

@@ -153,9 +153,18 @@ everyone, and a new couple is invisible until somebody changes it.
 ## 7. Games
 
 Couple games are offered on this page rather than the games shelf, because a
-couple game does not have the question a shelf asks — "who with". The first is
-**How Well Do You Know Me?**, which is co-operative and has no winner; see
-[GAMES.md §10](GAMES.md).
+couple game does not have the question a shelf asks — "who with". There are two,
+and neither has a winner; see [GAMES.md §10](GAMES.md).
+
+- **How Well Do You Know Me?** One of you answers about yourself, the other
+  guesses, and the score is the pair's.
+- **Guess My Answer.** Both of you answer and both of you predict, every round,
+  in a category you choose before you start.
+
+Guess My Answer is the only game so far that asks something before it opens, so
+the shelf has a `NEEDS_SETUP` list: games on it get a category picker, everything
+else goes straight from Play to a lobby. A settings step in front of a game with
+nothing to settle is a step for nothing.
 
 The history the two of them have played, with scores, sits under it.
 

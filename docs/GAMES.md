@@ -3,11 +3,11 @@
 The machinery that every game runs on, and the one interface a new game has to
 implement.
 
-**Four games are built** (§10): Would You Rather, Who Knows Me Better?,
-Draw & Guess, and How Well Do You Know Me? — the first for couples. The
-remaining catalogue rows still ship `enabled = false` and show on the shelf as
-"Soon"; a game becomes playable only when it has both a registered engine and an
-enabled row.
+**Five games are built** (§10): Would You Rather, Who Knows Me Better? and
+Draw & Guess for a group, How Well Do You Know Me? and Guess My Answer for a
+couple. The remaining catalogue rows still ship `enabled = false` and show on the
+shelf as "Soon"; a game becomes playable only when it has both a registered
+engine and an enabled row.
 
 ---
 
@@ -285,6 +285,7 @@ npm run wyr:test      102 assertions — Would You Rather
 npm run wkm:test      112 assertions — Who Knows Me Better?
 npm run draw:test     125 assertions — Draw & Guess, including the wire protocol
 npm run howwell:test   95 assertions — How Well, and the couple scope
+npm run guess:test    209 assertions — Guess My Answer, and game configuration
 ```
 
 Mostly negative, and aimed at the seam rather than the surface. Can somebody not
@@ -469,6 +470,51 @@ quiz about holidays.
 Which is the difference from Who Knows Me Better, where the subject sits out.
 With exactly two people, somebody sitting out is half the room doing nothing.
 
+### Guess My Answer
+
+The second couple game, and the one that is closest to another one — worth saying
+plainly, because the interesting part is what was done about it.
+
+Mechanically, How Well Do You Know Me? is also "somebody answers, somebody
+guesses, reveal, point for a match". Two differences were chosen to make this a
+different game to play rather than a reskin, and both are load-bearing:
+
+**It is symmetric.** How Well has a subject each round: one answers about
+themselves, the other guesses. Here **both do both**, every round — an honest
+answer and a prediction from each of them, four submissions, up to two points.
+That doubles what a round is worth, removes the sense of taking turns being
+examined, and makes the reveal a comparison rather than a verdict: you find out
+who read whom, in the same moment, about the same question.
+
+It also makes per-person counts fair, which they are not in How Well — there,
+only one of you guesses per round, so a personal total would mostly record who
+drew the easier questions. Here both face exactly the same task.
+
+**Categories.** `tender`, `petty`, `wild`, `past`, chosen by the pair before they
+start. Not a filter over one pile: `petty` and `tender` produce genuinely
+different evenings, and picking one is part of deciding what kind of evening this
+is. This is the feature that made §12 necessary.
+
+#### Drawn as a different game
+
+The brief asked for something visually distinct from the group games. A different
+palette on the same layout would not have been that, so the board is a **spread**:
+two columns while answering ("you would say" / "they will say"), which become the
+two people at the reveal, each showing what they said and what the other thought
+they would. Nothing else in KITH has four decisions on one screen, and the
+doubling is legible before a word is read. The question is set large in Fraunces
+across the top with a category chip in the category's own tone, so a `petty` round
+is a different colour from a `tender` one.
+
+#### Still no winner
+
+Two individual counts are shown at the end — they are comparable and interesting
+— but the headline is the pair's combined total, the outcome names both seats,
+and the two numbers are drawn identically so neither reads as beating the other.
+What leaves the engine into the database is one figure, for the reason in §11.
+The result copy is a band with a joke attached rather than a percentage, and the
+suite greps it for clinical language, same as How Well.
+
 ## 11. The couple scope
 
 `game_sessions` has had two scopes since migration 0007 — a conversation **or** a
@@ -489,18 +535,56 @@ leaving and rematching all worked unchanged. What was missing was a way to
 - `get_game_session` gained `couple_id`, because rematch reopens a session in the
   scope it was played in and had nowhere to look.
 - `list_couple_games` is the history, and takes `max(score)` rather than a sum —
-  a co-operative game writes the same number to both rows.
+  a couple game writes the same number to both rows.
 
 Couple games are offered on the **couple page**, not the games shelf. Putting one
 beside Draw & Guess would mean asking "who do you want to play this with", which
 is the one question it does not have.
 
-## 12. Not built
+### One number per couple, whatever the game counts internally
 
-- **The other five games.** The shelf shows them as "Soon" rather than hiding
+`max(score)` in the history assumes both seats carry the same figure, and both
+couple games make sure they do — including Guess My Answer, which genuinely does
+compute two different personal scores.
+
+That is deliberate rather than incidental. Look at what the game-agnostic
+machinery does with a per-seat number: the scoreboard **sorts** by it, the
+history takes the largest and labels it "our score", and a rematch shows it back
+to them weeks later. Every one of those turns two numbers into a ranking sooner
+or later. So a couple game's `outcome.scores` and `engine.scores()` both hand up
+one figure on both seats, and any per-person split stays inside that game's own
+`publicView`, where the only thing that reads it is the board that knows what it
+means.
+
+## 12. Configuring a game
+
+`game_sessions.config` has existed since migration 0007 and was `{}` in every
+session ever created, until Guess My Answer wanted the pair to choose a category
+before starting.
+
+Config is **opaque to Postgres**, on purpose: a database that understood a game's
+options would need a migration every time a game gained one. Which puts the
+burden of not trusting it everywhere else, so it is handled in three places, each
+doing only what it can:
+
+| Layer      | File                        | What it does                                                                                                                                                                                                         |
+| ---------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Whitelist  | `src/lib/games/config.ts`   | Per-game zod schema. Unknown keys dropped, ranges enforced, output typed as `Json`. A malformed config becomes `{}` rather than an error — every option has a default, so a bad request should open a playable game. |
+| Size cap   | `create_couple_game` (0023) | Refuses over 2 KB with `config_too_large`. A size limit is the one thing SQL can enforce without knowing what any of it means — and this object is stored and then broadcast to both players on every state change.  |
+| The engine | `createInitialState`        | Treats config as a suggestion. An unknown category is filtered out, an empty selection means all of them. A session created by an older client must still open.                                                      |
+
+The vocabulary itself (`GUESS_MY_ANSWER_CATEGORIES`) lives in `lib/` rather than
+in the games slice, because the picker is on the **couple** page and a feature may
+not import another feature. Duplicating four strings across two slices is exactly
+the drift the boundary rule exists to prevent.
+
+Nothing in a config decides who may do what — that is all in SQL — which is why
+failing soft is safe here and would not be somewhere else.
+
+## 13. Not built
+
+- **The other four games.** The shelf shows them as "Soon" rather than hiding
   them and looking empty.
-- **Couple games.** The schema supports them (`game_sessions.couple_id`), the
-  lifecycle RPCs currently take a conversation. One branch when couples land.
 - **Spectator private views.** A spectator gets `publicView` and nothing else,
   which is right for now; a game with per-spectator views (a commentator mode)
   would need `viewFor` to take a role rather than a seat.

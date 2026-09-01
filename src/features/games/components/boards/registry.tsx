@@ -1,6 +1,10 @@
 "use client";
 
 import { DrawGuessBoard } from "@/features/games/components/boards/draw-guess-board";
+import {
+  GuessMyAnswerBoard,
+  GuessMyAnswerResult,
+} from "@/features/games/components/boards/guess-my-answer-board";
 import { HowWellBoard, HowWellResult } from "@/features/games/components/boards/how-well-board";
 import { WhoKnowsMeBoard } from "@/features/games/components/boards/who-knows-me-board";
 import { WouldYouRatherBoard } from "@/features/games/components/boards/would-you-rather-board";
@@ -44,7 +48,13 @@ export interface BoardProps {
 }
 
 /** Games with a board. The rest render the "not built yet" panel. */
-const WITH_BOARDS = new Set(["would-you-rather", "who-knows-me", "draw-guess", "how-well"]);
+const WITH_BOARDS = new Set([
+  "would-you-rather",
+  "who-knows-me",
+  "draw-guess",
+  "how-well",
+  "guess-my-answer",
+]);
 
 export function hasBoard(gameKey: string): boolean {
   return WITH_BOARDS.has(gameKey);
@@ -60,6 +70,8 @@ export function GameBoard({ gameKey, ...props }: BoardProps & { gameKey: string 
       return <DrawGuessBoard {...props} />;
     case "how-well":
       return <HowWellBoard {...props} />;
+    case "guess-my-answer":
+      return <GuessMyAnswerBoard {...props} />;
     default:
       return null;
   }
@@ -76,19 +88,45 @@ export function GameBoard({ gameKey, ...props }: BoardProps & { gameKey: string 
  * A game with its own result renders it instead. Everything else keeps the
  * shared panel.
  */
-const WITH_RESULTS = new Set(["how-well"]);
+const WITH_RESULTS = new Set(["how-well", "guess-my-answer"]);
 
 export function hasOwnResult(gameKey: string): boolean {
   return WITH_RESULTS.has(gameKey);
 }
 
-export function GameResult({ gameKey, publicState }: { gameKey: string; publicState: unknown }) {
-  const state = publicState as { score?: number; played?: number; totalRounds?: number } | null;
+export function GameResult({
+  gameKey,
+  publicState,
+  players,
+  mySeat,
+}: {
+  gameKey: string;
+  publicState: unknown;
+  players: BoardProps["players"];
+  mySeat: number | null;
+}) {
+  const state = publicState as {
+    score?: number;
+    played?: number;
+    totalRounds?: number;
+    scores?: Record<number, number>;
+    together?: number;
+  } | null;
 
   switch (gameKey) {
     case "how-well":
       return (
         <HowWellResult score={state?.score ?? 0} total={state?.played ?? state?.totalRounds ?? 0} />
+      );
+    case "guess-my-answer":
+      return (
+        <GuessMyAnswerResult
+          scores={state?.scores ?? {}}
+          together={state?.together ?? 0}
+          total={state?.played ?? (state?.totalRounds ?? 0) * 2}
+          players={players}
+          mySeat={mySeat}
+        />
       );
     default:
       return null;

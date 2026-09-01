@@ -836,6 +836,7 @@ export type Database = {
         Args: {
           p_couple_id: string;
           p_game_key: string;
+          p_config?: Json | null;
           p_rematch_of?: string | null;
         };
         Returns: string;

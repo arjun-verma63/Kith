@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { getMyCouple, listPrompts, type CouplePrompt } from "@/features/couple/queries";
 import { promptFor } from "@/features/couple/prompts";
+import { parseGameConfig } from "@/lib/games/config";
 import { createSupabaseServerClient, getCurrentUser } from "@/lib/supabase/server";
 
 /**
@@ -242,6 +243,7 @@ export async function refreshCoupleAction(): Promise<{
 export async function startCoupleGameAction(
   coupleId: string,
   gameKey: string,
+  config?: unknown,
 ): Promise<{ ok: true; sessionId: string } | { ok: false; reason: string }> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, reason: "Sign in again." };
@@ -253,6 +255,9 @@ export async function startCoupleGameAction(
   const { data, error } = await supabase.rpc("create_couple_game", {
     p_couple_id: parsed.data,
     p_game_key: gameKey,
+    // The category choice, whitelisted. Anything else a client puts in here is
+    // dropped before it reaches a row that both players are sent on every move.
+    p_config: parseGameConfig(gameKey, config),
     p_rematch_of: null,
   });
 
