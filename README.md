@@ -45,6 +45,8 @@ served from our own origin.
 | `npm run check`              | `typecheck` + `lint` + `format:check`. Run before pushing  |
 | `npm run clean`              | Remove `.next` and the build cache                         |
 | `npm run build:local`        | Production build with a localhost origin allowed           |
+| `npm run start:local`        | Serve that build locally                                   |
+| `npm run smoke -- <url>`     | Verify a deployment from outside — no credentials needed   |
 | `npm run check:bundle`       | Scan the built client bundle for server-only secrets       |
 | `npm run db:start`           | Local Supabase stack (needs Docker)                        |
 | `npm run db:reset`           | Drop and replay every migration                            |
@@ -215,6 +217,10 @@ five landing components stopped being client components. It also records a metho
 error worth not repeating — `.next/static/chunks/` is not what a browser
 downloads, and reading it that way makes zod look like a 277 kB problem it is not.
 
+**[docs/VERCEL.md](docs/VERCEL.md)** is the Vercel walkthrough: connecting
+GitHub, every environment variable and which of Supabase or your TURN provider it
+comes from, the build settings to leave alone, the Supabase redirect allowlist
+that breaks signup if you skip it, and how to verify the result.
 **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** is how to run KITH locally and how
 to put it on the internet — the environment-variable checklist, both
 environments, the Supabase dashboard settings that are easy to miss (the redirect

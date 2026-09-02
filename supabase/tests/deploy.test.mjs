@@ -467,7 +467,71 @@ section("Storage");
 }
 
 /* ==========================================================================
- * 10 · Migrations
+ * 10 · Vercel and CI
+ * ========================================================================== */
+
+section("Vercel");
+
+{
+  const vercel = JSON.parse(read("vercel.json"));
+
+  eq("the framework is declared rather than guessed", vercel.framework, "nextjs");
+
+  /*
+   * The build scans the client bundle for server-only secrets, and Vercel is the
+   * right place for it: CI holds no production credentials, so the scanner there
+   * reports "nothing to scan". On Vercel the service-role key is present, so the
+   * scan is real — and it is the last thing between a bad refactor and
+   * publishing the database.
+   */
+  truthy(
+    "every deploy scans the client bundle for secrets",
+    /check:bundle/.test(vercel.buildCommand ?? ""),
+    "the one place the scanner runs with real secrets present",
+  );
+  truthy(
+    "and it runs the strict build, not the localhost opt-out",
+    !/build:local/.test(vercel.buildCommand ?? ""),
+    "build:local allows a loopback origin — every email would point at nowhere",
+  );
+
+  /*
+   * Free-tier Supabase pauses on database inactivity. /api/health issues a real
+   * query for exactly this reason; without a cron pointed at it, nothing calls
+   * it and the project sleeps a week after launch.
+   */
+  const cron = (vercel.crons ?? []).find((entry) => entry.path === "/api/health");
+  truthy("a cron keeps the Supabase project awake", cron !== undefined);
+  truthy(
+    "  running at least daily",
+    typeof cron?.schedule === "string" && cron.schedule.split(" ").length === 5,
+    `schedule is ${JSON.stringify(cron?.schedule)}`,
+  );
+}
+
+{
+  const ci = read(".github/workflows/ci.yml");
+
+  truthy("CI runs on pull requests, not only on main", /pull_request/.test(ci));
+
+  for (const [command, why] of [
+    ["npm run check", "typecheck, lint, format"],
+    ["npm test", "the suite"],
+    ["npm run db:types:check", "generated types drifting from the migrations"],
+    ["npm run check:bundle", "secrets in the client bundle"],
+  ]) {
+    truthy(`CI runs ${command} — ${why}`, ci.includes(command));
+  }
+
+  truthy(
+    "CI builds with the localhost opt-out, having no production origin to give",
+    /npm run build:local/.test(ci),
+    "the strict build belongs on Vercel, where the real variable is set",
+  );
+}
+
+/* ==========================================================================
+ * 11 · Migrations
  * ========================================================================== */
 
 section("Migrations");

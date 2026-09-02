@@ -9,7 +9,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:local": "node scripts/build-local.mjs",
+    "build:local": "node scripts/local-production.mjs build",
+    "start:local": "node scripts/local-production.mjs start",
+    "smoke": "node scripts/smoke.mjs",
     "start": "next start",
     "lint": "eslint",
     "lint:fix": "eslint --fix",

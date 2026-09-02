@@ -6,7 +6,7 @@ Sign-off before KITH is exposed to the internet. How to actually deploy is
 Items marked **BLOCKING** mean somebody cannot use the app, or data is at risk,
 if they are wrong. The rest can follow a first deploy.
 
-Sixty-two of these are checked by `npm run deploy:test` and marked ⚙. The others need
+Seventy-three of these are checked by `npm run deploy:test` and marked ⚙. The others need
 a human, a browser, or an inbox — they are here precisely because a machine
 cannot see them.
 
@@ -20,7 +20,7 @@ writing this; they are §9.
 | Gate                        | State                                      |
 | --------------------------- | ------------------------------------------ |
 | Code and configuration      | ✅ ready                                   |
-| Automated verification      | ✅ 31 suites, 2,355 assertions, 0 failures |
+| Automated verification      | ✅ 31 suites, 2,366 assertions, 0 failures |
 | Supabase project            | ⛔ not created — §2                        |
 | SMTP                        | ⛔ not configured — **blocking**, §2.4     |
 | Manual two-browser pass     | ⛔ not run — §6                            |
@@ -190,8 +190,12 @@ checked.
 - [x] ⚙ …answers 503 when Postgres is unreachable
 - [x] ⚙ …uses the anon key, not the service role — it is public and
       unauthenticated
-- [ ] Daily cron pointed at `/api/health`. Free-tier Supabase pauses after a week
-      of inactivity and six people will hit that
+- [x] ⚙ Daily cron pointed at `/api/health`, committed in `vercel.json`. Free-tier
+      Supabase pauses after a week of inactivity and six people will hit that
+- [x] ⚙ Every Vercel build scans the client bundle for secrets — the one place
+      that scan runs with real credentials present
+- [x] ⚙ CI runs check, types, suite, build and the bundle scan on every push and
+      pull request
 - [ ] Custom domain with a valid certificate
 - [ ] `NEXT_PUBLIC_SITE_URL` matches that domain exactly
 
@@ -199,9 +203,10 @@ checked.
 
 ## 6 · Manual verification
 
-The suite has never rendered a page. Not one of 2,355 assertions mounts a
+The suite has never rendered a page. Not one of 2,366 assertions mounts a
 component, so a route that throws on mount passes everything and fails on sight.
 
+- [ ] `npm run smoke -- https://<domain>` passes — see [VERCEL.md](VERCEL.md) §7
 - [ ] Smoke pass — every route loads with a clean console
       ([MANUAL-TESTING.md](MANUAL-TESTING.md) §0)
 - [ ] Full two-browser pass against the production build
@@ -224,9 +229,6 @@ component, so a route that throws on mount passes everything and fails on sight.
 
 None blocks a first deploy. All should exist before the app is depended on.
 Listed so they are decisions rather than oversights.
-
-**No CI.** Everything runs locally; nothing enforces that it ran. The workflow is
-four commands. Until it exists, this checklist depends on somebody remembering.
 
 **No backups.** Free-tier guarantees are not a plan for six people's years of
 conversations. Weekly `pg_dump` to encrypted object storage.

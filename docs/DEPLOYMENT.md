@@ -8,7 +8,7 @@ would be staging is a Vercel preview deployment pointed at its own Supabase
 project — see §6.
 
 The mechanical half of this document is enforced by `npm run deploy:test`
-(62 assertions). The half a machine cannot check is
+(73 assertions). The half a machine cannot check is
 [PRODUCTION-CHECKLIST.md](PRODUCTION-CHECKLIST.md).
 
 ---
@@ -231,8 +231,11 @@ Set every variable from §1 under **Settings → Environment Variables**, scoped
 **Production**. Then set the same set for **Preview** pointing at a _different_
 Supabase project (§6).
 
-Build settings are the defaults — `npm run build`, output detected
-automatically. There is no `vercel.json` because nothing needs overriding.
+Build settings come from `vercel.json` — leave the dashboard alone. A dashboard
+override silently wins, and the thing it would drop is the secret scan.
+
+The Vercel-specific walkthrough, including where every value comes from, is
+[VERCEL.md](VERCEL.md).
 
 ### 3.6 The keepalive
 
@@ -245,7 +248,7 @@ scheduled ping kept a Vercel function warm while the project it was protecting
 went to sleep — a cron job that looked like it was working and a site that would
 have died a week after launch.
 
-Schedule a daily GET. Any cron will do; a Vercel Cron is one line:
+That cron is committed in `vercel.json`, so it needs no setup:
 
 ```json
 { "crons": [{ "path": "/api/health", "schedule": "0 6 * * *" }] }
@@ -343,11 +346,6 @@ will not work there at all.
 
 Written down rather than left implied. None of these blocks a first deploy; all
 of them should exist before the app is depended on.
-
-**Continuous integration.** There is no `.github/`. Everything runs locally and
-nothing enforces that it ran. The workflow is small — `npm run check`, `npm test`,
-`npm run build` on every push, plus `npm run db:types:check` — and the value is
-that the readiness checklist stops depending on somebody remembering.
 
 **Backups.** Free-tier Supabase backup guarantees are not a plan for six people's
 years of conversations. A weekly `pg_dump` to encrypted object storage, from a

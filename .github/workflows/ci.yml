@@ -1,0 +1,70 @@
+# Everything that must be true before a commit reaches production.
+#
+# Vercel deploys `main` automatically the moment it is pushed. That is the point
+# of connecting GitHub to it, and it is also the risk: without this workflow the
+# only thing standing between a broken commit and six people's app is whether
+# somebody remembered to run the suite locally.
+#
+# So this runs the same three commands the deployment docs ask for, on every push
+# and every pull request. Protect `main` with a required status check
+# (Settings -> Branches) and "somebody remembered" stops being load-bearing.
+#
+# No secrets are needed. Every suite runs against PGlite — Postgres 17 compiled
+# to WebAssembly — so the schema, every policy and every function are verified
+# with no Supabase project, no Docker and no network. That is a deliberate
+# property of the test design, and it is what makes this file eight lines of
+# actual work.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A second push to the same branch makes the first run irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # 24 for native TypeScript type-stripping: the suites import the
+          # shipped `.ts` modules directly rather than a compiled copy.
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck, lint, format
+        run: npm run check
+
+      # Generated types drifting from the migrations is silent until something
+      # fails at runtime with a shape error nobody can place.
+      - name: Database types are current
+        run: npm run db:types:check
+
+      - name: Test
+        run: npm test
+
+      # `build:local`, not `build`: a production build refuses a loopback
+      # NEXT_PUBLIC_SITE_URL, and CI has no production origin to give it. Vercel
+      # runs the strict one with the real variable and fails the deploy if it is
+      # missing — which is where that check belongs.
+      - name: Build
+        run: npm run build:local
+
+      # Scans the built client bundle for server-only secrets. It reports
+      # "nothing to scan" here, because CI holds no secrets — the real scan runs
+      # on Vercel, where the service-role key exists. Kept so the step cannot
+      # rot unnoticed between deploys.
+      - name: Client bundle carries no secrets
+        run: npm run check:bundle

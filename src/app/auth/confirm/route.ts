@@ -41,6 +41,24 @@ export async function GET(request: NextRequest) {
     redirect(type === "recovery" ? "/forgot-password?expired=1" : "/login?error=link_expired");
   }
 
+  /*
+   * Nothing to verify — bail before touching Supabase.
+   *
+   * A request with no token is a bot, a stale bookmark, or somebody who typed
+   * the URL. It cannot succeed, so constructing a client for it is wasted work
+   * on a public endpoint; the outcome is the same redirect the `!verified`
+   * branch below reaches anyway.
+   *
+   * Found by the production smoke test, which reported this route as the only
+   * 500 on the site: with Supabase not yet configured, building the client threw
+   * where a redirect was the correct answer. That configuration is temporary,
+   * but "an unconfigured dependency turns a redirect into a 500" is not the
+   * behaviour you want on the URL every email in the system points at.
+   */
+  if (!(tokenHash && type) && !code) {
+    redirect(type === "recovery" ? "/forgot-password?expired=1" : "/login?error=link_expired");
+  }
+
   const supabase = await createSupabaseServerClient();
   let verified = false;
 
