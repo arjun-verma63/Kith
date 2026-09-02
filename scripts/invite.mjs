@@ -95,21 +95,70 @@ const admin = createClient(url, serviceKey, {
 
 /* -------------------------------------------------------------------------- */
 
-const { data: profile, error: profileError } = await admin
-  .from("profiles")
-  .select("id, username, display_name")
-  .eq("username", username)
-  .maybeSingle();
+/*
+ * Username OR email.
+ *
+ * You sign up with an email and the room knows you by a username, so "which one
+ * does this want" is a coin flip at exactly the moment you are trying to get
+ * your friends in. It takes either.
+ *
+ * The email lives on `auth.users`, not on `profiles`, so that lookup is a second
+ * hop through the admin API rather than a column on the first query.
+ */
+async function findMember(needle) {
+  const { data: byUsername, error } = await admin
+    .from("profiles")
+    .select("id, username, display_name")
+    .eq("username", needle)
+    .maybeSingle();
 
-if (profileError) {
-  console.error(`Could not look up "${username}": ${profileError.message}`);
+  if (error) throw new Error(error.message);
+  if (byUsername) return byUsername;
+  if (!needle.includes("@")) return null;
+
+  const { data: users } = await admin.auth.admin.listUsers({ perPage: 200 });
+  const match = users?.users.find((user) => user.email?.toLowerCase() === needle.toLowerCase());
+  if (!match) return null;
+
+  const { data: byId } = await admin
+    .from("profiles")
+    .select("id, username, display_name")
+    .eq("id", match.id)
+    .maybeSingle();
+
+  return byId ?? null;
+}
+
+let profile;
+try {
+  profile = await findMember(username);
+} catch (message) {
+  console.error(`Could not look up "${username}": ${message}`);
   process.exit(1);
 }
 
 if (!profile) {
-  console.error(`No member with the username "${username}".`);
-  console.error("If nobody has signed up yet, the FIRST signup needs no code at all — just leave");
-  console.error("the invite field blank. This script is for everybody after that.");
+  console.error(`\n  No member matching "${username}".\n`);
+
+  // Never leave somebody guessing at the one argument this takes.
+  const { data: members } = await admin
+    .from("profiles")
+    .select("username, display_name")
+    .order("created_at", { ascending: true })
+    .limit(20);
+
+  if (members && members.length > 0) {
+    console.error("  Members of this room:\n");
+    for (const member of members) {
+      console.error(`    ${member.username}  (${member.display_name})`);
+    }
+    console.error("\n  Pass a username or an email address from that list.\n");
+  } else {
+    console.error("  This room is empty, so there is nobody to invite anybody yet.");
+    console.error("  The FIRST signup needs no code — leave the invite field blank on /signup.");
+    console.error("  Come back here once you are in.\n");
+  }
+
   process.exit(1);
 }
 
