@@ -82,6 +82,7 @@ export type SecurityEvent =
   | "mfa.challenge_passed"
   | "password.changed"
   | "password.change_failed"
+  | "password.reset"
   | "email.change_requested"
   | "email.change_failed"
   | "sessions.revoked_others"

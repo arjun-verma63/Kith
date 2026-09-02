@@ -14,6 +14,7 @@ import {
   signInSchema,
   signUpSchema,
 } from "@/features/auth/schema";
+import { recordSecurityEvent } from "@/features/auth/mfa-queries";
 import { toFieldErrors, type FormState } from "@/lib/forms";
 import { safeRedirect } from "@/features/auth/redirects";
 
@@ -235,6 +236,30 @@ export async function forgotPasswordAction(
 /*  Reset password                                                            */
 /* ========================================================================== */
 
+/**
+ * Sets a new password from a recovery link.
+ *
+ * ── Why this signs out EVERY session, including this one ─────────────────────
+ *
+ * `changePasswordAction` in `account-actions.ts` revokes `scope: 'others'` and
+ * keeps the current browser, on the reasoning that signing somebody out of the
+ * device they are using — as a reward for improving their security — is
+ * needlessly punitive. That is right for a change made from Settings, where the
+ * person is already signed in and has just typed their old password.
+ *
+ * A reset is not that. The only thing anybody proved here is that they can read
+ * an inbox, and the reason people use this flow is that something has gone
+ * wrong: a forgotten password, or the belief that somebody else has theirs. If
+ * an attacker is holding a live session, `others` would end it and `nothing`
+ * would leave it running — so this originally left the attacker signed in
+ * through the one action taken specifically to lock them out.
+ *
+ * `global` is the honest scope. After a reset, nothing that authenticated before
+ * it still counts, and the person signs in once with the password they just set.
+ * `/login?reset=1` has always said "Password changed. Sign in with the new one."
+ * — that message was simply unreachable, because the session survived and
+ * middleware bounced a signed-in user off `/login`.
+ */
 export async function resetPasswordAction(
   _prev: FormState,
   formData: FormData,
@@ -271,6 +296,20 @@ export async function resetPasswordAction(
       });
     }
     return { ...fromAuthError(error, "updatePassword").error, status: "error" } as FormState;
+  }
+
+  // Before the sign-out, because the sign-out invalidates the session this runs
+  // under. `recordSecurityEvent` writes through the service role and swallows
+  // its own failures, so it cannot turn a successful reset into an error.
+  await recordSecurityEvent(user.id, "password.reset");
+
+  // See the note above: everything, not just the other devices. A failure here
+  // is not surfaced — the password IS changed, and sending somebody back to a
+  // form that says otherwise would be worse than a session outliving its reset.
+  const { error: signOutError } = await supabase.auth.signOut({ scope: "global" });
+
+  if (signOutError) {
+    console.error("[kith:auth] reset sign-out failed", { status: signOutError.status });
   }
 
   redirect("/login?reset=1");

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { channels, PRIVATE_CHANNEL, BROADCAST_BATCH_MS } from "@/lib/supabase/realtime";
+import { TypingRoster, TypingThrottle } from "@/features/messages/typing";
 
 /**
  * The live half of a conversation.
@@ -52,8 +53,15 @@ export interface ConversationChannelHandlers {
   onReaction: (reaction: LiveReaction) => void;
 }
 
-/** How long a typing indicator survives without a refresh. */
-const TYPING_TTL_MS = 4000;
+/**
+ * How often this browser says "still typing".
+ *
+ * Five batching windows apart. The receiving side forgets anybody it has not
+ * heard from for `TYPING_TTL_MS`, and `typing.test.mjs` asserts this stays
+ * comfortably inside that — the two numbers are in different files and a
+ * refresh slower than the expiry makes every typist flicker.
+ */
+const TYPING_REFRESH_MS = BROADCAST_BATCH_MS * 5;
 
 export function useConversationChannel(
   conversationId: string,
@@ -75,33 +83,42 @@ export function useConversationChannel(
     ReturnType<typeof getSupabaseBrowserClient>["channel"]
   > | null>(null);
 
-  const lastTypingSentAt = useRef(0);
-  const typingTimers = useRef(new Map<string, number>());
+  const throttle = useRef<TypingThrottle | null>(null);
+  throttle.current ??= new TypingThrottle(TYPING_REFRESH_MS);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     const channel = supabase.channel(channels.conversation(conversationId), PRIVATE_CHANNEL);
     channelRef.current = channel;
 
-    const timers = typingTimers.current;
+    /*
+     * The roster owns the expiry; this effect owns exactly one timer for it.
+     *
+     * Previously there was a timer per person, which meant five typists were
+     * five pending callbacks to cancel on unmount — and one missed cancellation
+     * is a `setState` on a component that has gone. `nextExpiryIn()` collapses
+     * that to a single scheduled prune, rescheduled as people come and go.
+     */
+    const roster = new TypingRoster(userId);
+    let expiryTimer: number | undefined;
+
+    const repaint = () => {
+      setTypingUserIds(roster.ids());
+      window.clearTimeout(expiryTimer);
+
+      const next = roster.nextExpiryIn();
+      if (next !== null) {
+        expiryTimer = window.setTimeout(() => {
+          roster.prune();
+          repaint();
+        }, next);
+      }
+    };
 
     const onTyping = ({ payload }: { payload: { userId?: string } }) => {
-      const who = payload?.userId;
-      if (!who || who === userId) return;
-
-      setTypingUserIds((current) => (current.includes(who) ? current : [...current, who]));
-
-      // Expiry is client-side and unconditional. A sender who closes the tab
-      // mid-word never sends a "stopped typing", so an indicator that waits for
-      // one stays on screen forever.
-      window.clearTimeout(timers.get(who));
-      timers.set(
-        who,
-        window.setTimeout(() => {
-          setTypingUserIds((current) => current.filter((id) => id !== who));
-          timers.delete(who);
-        }, TYPING_TTL_MS),
-      );
+      // A repaint only when the visible set actually changes — the second
+      // keystroke of somebody already listed changes nothing anybody can see.
+      if (roster.note(payload?.userId)) repaint();
     };
 
     channel
@@ -123,8 +140,8 @@ export function useConversationChannel(
       });
 
     return () => {
-      for (const timer of timers.values()) window.clearTimeout(timer);
-      timers.clear();
+      window.clearTimeout(expiryTimer);
+      roster.clear();
       setTypingUserIds([]);
       channelRef.current = null;
       void supabase.removeChannel(channel);
@@ -139,9 +156,7 @@ export function useConversationChannel(
    * makes a sparse signal enough.
    */
   const sendTyping = useCallback(() => {
-    const now = Date.now();
-    if (now - lastTypingSentAt.current < BROADCAST_BATCH_MS * 5) return;
-    lastTypingSentAt.current = now;
+    if (!throttle.current?.shouldSend()) return;
 
     void channelRef.current?.send({
       type: "broadcast",

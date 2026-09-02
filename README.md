@@ -52,6 +52,7 @@ served from our own origin.
 | `npm run test`               | Every suite below, in order                                |
 | `npm run db:test`            | Schema and RLS                                             |
 | `npm run auth:test`          | Redirect rules, validation, invite redemption              |
+| `npm run auth-flows:test`    | The six auth actions, run — signup to password reset       |
 | `npm run mfa:test`           | Two-factor: the data-layer gate, routing, RFC 6238         |
 | `npm run account:test`       | Deletion, sessions, privacy controls, what a page may show |
 | `npm run safety:test`        | Blocking across every surface, and reports                 |
@@ -64,11 +65,13 @@ served from our own origin.
 | `npm run friends:test`       | Requests, friendships, the constraints behind them         |
 | `npm run presence:test`      | The presence resolution rule and its channel policy        |
 | `npm run messages:test`      | Membership, pagination, reactions, sanitisation            |
+| `npm run typing:test`        | Typing indicators: expiry, ordering, throttle              |
 | `npm run notifications:test` | Fan-out, collapsing, read state                            |
 | `npm run webrtc:test`        | Two real peers connecting, and perfect negotiation         |
 | `npm run calls:test`         | The call lifecycle and who may do what to it               |
 | `npm run call-session:test`  | Two sessions, one call, end to end                         |
 | `npm run screen-share:test`  | Capture, stopping, and the one-sender rule                 |
+| `npm run call-media:test`    | Microphone and camera: permissions, muted vs off           |
 | `npm run turn:test`          | Relay credentials, transports, and the route               |
 | `npm run games:test`         | The lobby, turn enforcement, and who may write state       |
 | `npm run wyr:test`           | Would You Rather: secrecy, scoring, people leaving         |
@@ -209,6 +212,16 @@ request-cached, so a render revalidates the JWT once rather than three times; an
 five landing components stopped being client components. It also records a method
 error worth not repeating — `.next/static/chunks/` is not what a browser
 downloads, and reading it that way makes zod look like a 277 kB problem it is not.
+
+**[docs/TESTING.md](docs/TESTING.md)** is the testing strategy: what is tested at
+which of the five layers, and — the part usually left out — what is deliberately
+not tested and how it gets checked instead. The rule everything follows from is
+_test the shipped file, against the real thing, or say plainly that you did not_.
+It also documents the loader that lets a Next.js server action run outside a
+request, which is why the six authentication actions finally have tests, and the
+three bugs that found. **[docs/MANUAL-TESTING.md](docs/MANUAL-TESTING.md)** is the
+two-browser checklist for everything a suite cannot reach — a real email, a real
+permission prompt, and a second person.
 
 **[docs/SECURITY.md](docs/SECURITY.md)** is the security audit. Six
 vulnerabilities, found by attempting the attacks rather than by reading the

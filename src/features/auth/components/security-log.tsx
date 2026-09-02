@@ -21,6 +21,7 @@ const LABELS: Record<string, string> = {
   "mfa.challenge_passed": "Signed in with a code",
   "password.changed": "Changed the password",
   "password.change_failed": "A password change was refused",
+  "password.reset": "Reset the password from a link sent by email",
   "email.change_requested": "Asked to change the email address",
   "email.change_failed": "An email change was refused",
   "sessions.revoked_others": "Signed out every other device",

@@ -29,6 +29,7 @@
     "mfa:reset": "node scripts/mfa-reset.mjs",
     "db:test": "node supabase/tests/rls.test.mjs",
     "auth:test": "node supabase/tests/auth.test.mjs",
+    "auth-flows:test": "node supabase/tests/auth-flows.test.mjs",
     "mfa:test": "node supabase/tests/mfa.test.mjs",
     "account:test": "node supabase/tests/account.test.mjs",
     "safety:test": "node supabase/tests/safety.test.mjs",
@@ -41,10 +42,12 @@
     "friends:test": "node supabase/tests/friends.test.mjs",
     "presence:test": "node supabase/tests/presence.test.mjs",
     "messages:test": "node supabase/tests/messages.test.mjs",
+    "typing:test": "node supabase/tests/typing.test.mjs",
     "notifications:test": "node supabase/tests/notifications.test.mjs",
     "calls:test": "node supabase/tests/calls.test.mjs",
     "call-session:test": "node supabase/tests/call-session.test.mjs",
     "screen-share:test": "node supabase/tests/screen-share.test.mjs",
+    "call-media:test": "node supabase/tests/call-media.test.mjs",
     "turn:test": "node supabase/tests/turn.test.mjs",
     "games:test": "node supabase/tests/games.test.mjs",
     "wyr:test": "node supabase/tests/would-you-rather.test.mjs",
@@ -54,7 +57,7 @@
     "howwell:test": "node supabase/tests/how-well.test.mjs",
     "guess:test": "node supabase/tests/guess-my-answer.test.mjs",
     "webrtc:test": "node supabase/tests/webrtc.test.mjs",
-    "test": "npm run db:test && npm run auth:test && npm run mfa:test && npm run account:test && npm run safety:test && npm run settings:test && npm run mobile:test && npm run pwa:test && npm run perf:test && npm run security:test && npm run profile:test && npm run friends:test && npm run presence:test && npm run messages:test && npm run notifications:test && npm run webrtc:test && npm run calls:test && npm run call-session:test && npm run screen-share:test && npm run turn:test && npm run games:test && npm run wyr:test && npm run wkm:test && npm run draw:test && npm run couple:test && npm run howwell:test && npm run guess:test"
+    "test": "npm run db:test && npm run auth:test && npm run auth-flows:test && npm run mfa:test && npm run account:test && npm run safety:test && npm run settings:test && npm run mobile:test && npm run pwa:test && npm run perf:test && npm run security:test && npm run profile:test && npm run friends:test && npm run presence:test && npm run messages:test && npm run typing:test && npm run notifications:test && npm run webrtc:test && npm run calls:test && npm run call-session:test && npm run screen-share:test && npm run call-media:test && npm run turn:test && npm run games:test && npm run wyr:test && npm run wkm:test && npm run draw:test && npm run couple:test && npm run howwell:test && npm run guess:test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
