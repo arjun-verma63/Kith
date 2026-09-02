@@ -224,7 +224,13 @@ export async function getIceServersAction(callId: string): Promise<{
       source: credential.source,
     };
   } catch (error) {
-    console.error("[turn] could not issue relay credentials; the call will use STUN", error);
+    // `{ message }`, not the error: everything else in this codebase logs a
+    // status or a message rather than an object, and a raw error here carries a
+    // stack through the credential minter — the one code path that reads
+    // TURN_SHARED_SECRET.
+    console.error("[turn] could not issue relay credentials; the call will use STUN", {
+      message: error instanceof Error ? error.message : "unknown",
+    });
     return empty;
   }
 }

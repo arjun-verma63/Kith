@@ -40,15 +40,38 @@ const CODE_MAP: Record<string, { code: AppErrorCode; message: string }> = {
   PGRST301: { code: "unauthenticated", message: "Your session expired. Sign in again." },
 };
 
+/**
+ * Postgres puts the offending ROW in `details`, not just the column.
+ *
+ *     DETAIL: Failing row contains (1, a private message nobody should read).
+ *
+ * Which is superb while debugging and unacceptable in a production log. KITH's
+ * whole premise is that six people can say things to each other privately; a
+ * check-constraint violation writing a message body into Vercel's log — where it
+ * is retained, searchable, and readable by anyone with project access — quietly
+ * breaks that promise. Unique violations are the same shape, naming the value
+ * that clashed.
+ *
+ * `message` and `hint` are safe: they name constraints and suggest fixes, and
+ * never carry a value. So `details` is kept where it earns its keep and dropped
+ * where it costs more than it is worth.
+ */
+function safeDetails(details: string | null): string | null {
+  if (process.env.NODE_ENV !== "production") return details;
+  if (!details) return null;
+
+  return /failing row contains|key \(/i.test(details) ? "[redacted: contains row data]" : details;
+}
+
 export function fromPostgrestError(error: PostgrestError, context: string): Err<AppError> {
   const mapped = CODE_MAP[error.code];
 
-  // The full error, including schema detail, goes to the server log and nowhere
-  // near the response.
+  // Schema detail goes to the server log and nowhere near the response. Row
+  // CONTENT does not go to either — see `safeDetails`.
   console.error(`[kith:db] ${context}`, {
     code: error.code,
     message: error.message,
-    details: error.details,
+    details: safeDetails(error.details),
     hint: error.hint,
   });
 

@@ -44,6 +44,7 @@ served from our own origin.
 | `npm run format:check`       | Prettier check — what CI runs                              |
 | `npm run check`              | `typecheck` + `lint` + `format:check`. Run before pushing  |
 | `npm run clean`              | Remove `.next` and the build cache                         |
+| `npm run build:local`        | Production build with a localhost origin allowed           |
 | `npm run check:bundle`       | Scan the built client bundle for server-only secrets       |
 | `npm run db:start`           | Local Supabase stack (needs Docker)                        |
 | `npm run db:reset`           | Drop and replay every migration                            |
@@ -61,6 +62,7 @@ served from our own origin.
 | `npm run pwa:test`           | Manifest, icons, and the service worker's safety rules     |
 | `npm run perf:test`          | Round trips, cleanup, re-render pressure, pagination       |
 | `npm run security:test`      | Attacks, as a member of the room whose account is stolen   |
+| `npm run deploy:test`        | Deployment invariants: secrets, origins, storage, schema   |
 | `npm run profile:test`       | Profile triggers, username rules, storage policies         |
 | `npm run friends:test`       | Requests, friendships, the constraints behind them         |
 | `npm run presence:test`      | The presence resolution rule and its channel policy        |
@@ -212,6 +214,14 @@ request-cached, so a render revalidates the JWT once rather than three times; an
 five landing components stopped being client components. It also records a method
 error worth not repeating — `.next/static/chunks/` is not what a browser
 downloads, and reading it that way makes zod look like a 277 kB problem it is not.
+
+**[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** is how to run KITH locally and how
+to put it on the internet — the environment-variable checklist, both
+environments, the Supabase dashboard settings that are easy to miss (the redirect
+allowlist, custom SMTP), TURN, and what rolls back and what does not.
+**[docs/PRODUCTION-CHECKLIST.md](docs/PRODUCTION-CHECKLIST.md)** is the sign-off,
+with the sixty-two mechanical items enforced by `npm run deploy:test` and the
+rest left as human steps because a machine cannot check whether an email arrived.
 
 **[docs/TESTING.md](docs/TESTING.md)** is the testing strategy: what is tested at
 which of the five layers, and — the part usually left out — what is deliberately
