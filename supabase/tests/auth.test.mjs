@@ -27,7 +27,8 @@ import { freshDatabase, asService, createUser } from "./harness.mjs";
 // Node 24 strips TypeScript types natively, so the source modules import directly.
 // Testing the real files rather than a copy is the point: a rule that only holds
 // in the test is not a rule.
-const { decideRedirect, safeRedirect } = await import("../../src/features/auth/redirects.ts");
+const { decideRedirect, safeRedirect, DEFAULT_SIGNED_IN_ROUTE } =
+  await import("../../src/features/auth/redirects.ts");
 const { signUpSchema, signInSchema, resetPasswordSchema, forgotPasswordSchema } =
   await import("../../src/features/auth/schema.ts");
 
@@ -116,12 +117,31 @@ eq(
 );
 eq("unverified, landing page passes", decideRedirect({ pathname: "/", ...UNVERIFIED }), null);
 
-eq("verified, /login -> home", decideRedirect({ pathname: "/login", ...VERIFIED })?.to, "/");
+/*
+ * Home is the APP, not the marketing page.
+ *
+ * These asserted "/" and passed, because the constant said "/" — and the result
+ * was that a signed-in visitor clicking "Sign in" on the landing page was
+ * bounced back to the landing page, which reads as a dead button. `/` has no
+ * signed-in view; the app group has no page there.
+ */
 eq(
-  "verified, /verify-email -> home (nothing left to do)",
-  decideRedirect({ pathname: "/verify-email", ...VERIFIED })?.to,
-  "/",
+  "verified, /login -> the app",
+  decideRedirect({ pathname: "/login", ...VERIFIED })?.to,
+  DEFAULT_SIGNED_IN_ROUTE,
 );
+eq(
+  "verified, /verify-email -> the app (nothing left to do)",
+  decideRedirect({ pathname: "/verify-email", ...VERIFIED })?.to,
+  DEFAULT_SIGNED_IN_ROUTE,
+);
+// Sending a signed-in user to the public landing page makes every auth CTA on
+// it look broken: click, bounce, same page, same button.
+if (DEFAULT_SIGNED_IN_ROUTE === "/") {
+  bad("home is somewhere a signed-in person can actually be", "it is the landing page");
+} else {
+  ok("and that home is somewhere a signed-in person can actually be");
+}
 eq(
   "verified, protected route passes",
   decideRedirect({ pathname: "/messages", ...VERIFIED }),

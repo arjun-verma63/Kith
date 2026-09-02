@@ -12,7 +12,7 @@ import {
   type MfaState,
 } from "@/features/auth/mfa";
 import { getMfaStatus, recordSecurityEvent } from "@/features/auth/mfa-queries";
-import { safeRedirect } from "@/features/auth/redirects";
+import { DEFAULT_SIGNED_IN_ROUTE, safeRedirect } from "@/features/auth/redirects";
 import type { FormState } from "@/lib/forms";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { KithSupabaseClient } from "@/lib/supabase/client";
@@ -352,7 +352,7 @@ export async function verifyChallengeAction(
   const state = await getMfaStatus();
 
   // Nothing to prove — enrolment was removed on another device mid-challenge.
-  if (!state?.challengeRequired) redirect(next ?? "/");
+  if (!state?.challengeRequired) redirect(next ?? DEFAULT_SIGNED_IN_ROUTE);
 
   const verified = await verifyAgainstAnyFactor(supabase, state, parsed.data);
 
@@ -363,5 +363,5 @@ export async function verifyChallengeAction(
 
   await recordSecurityEvent(user.id, "mfa.challenge_passed", { factorId: verified.factorId });
 
-  redirect(next ?? "/");
+  redirect(next ?? DEFAULT_SIGNED_IN_ROUTE);
 }

@@ -26,6 +26,7 @@
  *     npm run auth-flows:test
  */
 
+import { readFileSync } from "node:fs";
 import { register } from "node:module";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -47,7 +48,8 @@ const {
   resendVerificationAction,
 } = await import("../../src/features/auth/actions.ts");
 
-const { decideRedirect, safeRedirect } = await import("../../src/features/auth/redirects.ts");
+const { decideRedirect, safeRedirect, DEFAULT_SIGNED_IN_ROUTE } =
+  await import("../../src/features/auth/redirects.ts");
 
 let passed = 0;
 let failed = 0;
@@ -378,7 +380,58 @@ section("Login");
     signInAction,
     form({ email: "ada@example.test", password: "correct horse battery staple" }),
   );
-  eq("an abandoned enrollment does not lock the account out", result.to, "/");
+  eq("an abandoned enrollment does not lock the account out", result.to, DEFAULT_SIGNED_IN_ROUTE);
+}
+
+{
+  /*
+   * Signing in must land you IN the app.
+   *
+   * This is the assertion that was missing. `DEFAULT_SIGNED_IN_ROUTE` exists so
+   * there is one copy of "where does a signed-in person go", and three call
+   * sites had written `"/"` inline anyway — so changing the constant fixed the
+   * middleware and left the sign-in action still dropping people on the public
+   * marketing page. Which looks exactly like signing in having failed.
+   */
+  script({
+    signInWithPassword: {
+      data: { user: { id: "u", email_confirmed_at: "2026-01-01", factors: [] } },
+      error: null,
+    },
+  });
+  const landed = await run(
+    signInAction,
+    form({ email: "ada@example.test", password: "correct horse battery staple" }),
+  );
+
+  eq("a successful sign-in opens the app", landed.to, DEFAULT_SIGNED_IN_ROUTE);
+  truthy(
+    "  which is not the marketing page",
+    landed.to !== "/",
+    "signing in dropped the person back on the public landing page",
+  );
+}
+
+{
+  /*
+   * And no auth action may hardcode it.
+   *
+   * A source check, because the failure being guarded against is a fourth call
+   * site written the same way — which behaviour cannot see until somebody walks
+   * that exact path in production, as happened here.
+   */
+  const sources = ["src/features/auth/actions.ts", "src/features/auth/mfa-actions.ts"];
+
+  for (const file of sources) {
+    const text = readFileSync(join(process.cwd(), file), "utf8");
+    const inlineHome = [...text.matchAll(/redirect\(\s*(?:[^)]*\?\?\s*)?"\/"\s*\)/g)];
+
+    truthy(
+      `${file} routes post-auth traffic through the constant`,
+      inlineHome.length === 0,
+      `${inlineHome.length} redirect(s) hardcode "/" instead of DEFAULT_SIGNED_IN_ROUTE`,
+    );
+  }
 }
 
 {
@@ -412,7 +465,7 @@ section("Login");
         redirectTo: hostile,
       }),
     );
-    eq(`a redirect to ${hostile} is discarded`, result.to, "/");
+    eq(`a redirect to ${hostile} is discarded`, result.to, DEFAULT_SIGNED_IN_ROUTE);
   }
 }
 

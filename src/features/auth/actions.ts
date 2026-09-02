@@ -16,7 +16,7 @@ import {
 } from "@/features/auth/schema";
 import { recordSecurityEvent } from "@/features/auth/mfa-queries";
 import { toFieldErrors, type FormState } from "@/lib/forms";
-import { safeRedirect } from "@/features/auth/redirects";
+import { DEFAULT_SIGNED_IN_ROUTE, safeRedirect } from "@/features/auth/redirects";
 
 /**
  * Authentication server actions.
@@ -226,7 +226,10 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
     redirect(next ? `/verify-2fa?next=${encodeURIComponent(next)}` : "/verify-2fa");
   }
 
-  redirect(safeRedirect(parsed.data.redirectTo ?? null) ?? "/");
+  // DEFAULT_SIGNED_IN_ROUTE, not "/". A literal here was the bug that survived
+  // changing the constant: signing in succeeded and dropped you on the public
+  // marketing page, which looks exactly like signing in having failed.
+  redirect(safeRedirect(parsed.data.redirectTo ?? null) ?? DEFAULT_SIGNED_IN_ROUTE);
 }
 
 /* ========================================================================== */
