@@ -29,6 +29,7 @@
     "db:types": "node scripts/generate-database-types.mjs",
     "icons": "node scripts/generate-icons.mjs",
     "db:types:check": "node scripts/check-database-types.mjs",
+    "invite": "node scripts/invite.mjs",
     "mfa:reset": "node scripts/mfa-reset.mjs",
     "db:test": "node supabase/tests/rls.test.mjs",
     "auth:test": "node supabase/tests/auth.test.mjs",

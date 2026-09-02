@@ -51,6 +51,7 @@ served from our own origin.
 | `npm run db:start`           | Local Supabase stack (needs Docker)                        |
 | `npm run db:reset`           | Drop and replay every migration                            |
 | `npm run db:diff`            | Capture local schema changes as a migration                |
+| `npm run invite -- <user>`   | Mint an invitation code (service role) — shown once        |
 | `npm run mfa:reset`          | Remove an account's 2FA factors (service role, see below)  |
 | `npm run test`               | Every suite below, in order                                |
 | `npm run db:test`            | Schema and RLS                                             |
