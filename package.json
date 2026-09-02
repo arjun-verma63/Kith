@@ -48,6 +48,7 @@
     "presence:test": "node supabase/tests/presence.test.mjs",
     "messages:test": "node supabase/tests/messages.test.mjs",
     "typing:test": "node supabase/tests/typing.test.mjs",
+    "navigation:test": "node supabase/tests/navigation.test.mjs",
     "notifications:test": "node supabase/tests/notifications.test.mjs",
     "calls:test": "node supabase/tests/calls.test.mjs",
     "call-session:test": "node supabase/tests/call-session.test.mjs",
@@ -62,7 +63,7 @@
     "howwell:test": "node supabase/tests/how-well.test.mjs",
     "guess:test": "node supabase/tests/guess-my-answer.test.mjs",
     "webrtc:test": "node supabase/tests/webrtc.test.mjs",
-    "test": "npm run db:test && npm run auth:test && npm run auth-flows:test && npm run mfa:test && npm run account:test && npm run safety:test && npm run settings:test && npm run mobile:test && npm run pwa:test && npm run perf:test && npm run security:test && npm run deploy:test && npm run profile:test && npm run friends:test && npm run presence:test && npm run messages:test && npm run typing:test && npm run notifications:test && npm run webrtc:test && npm run calls:test && npm run call-session:test && npm run screen-share:test && npm run call-media:test && npm run turn:test && npm run games:test && npm run wyr:test && npm run wkm:test && npm run draw:test && npm run couple:test && npm run howwell:test && npm run guess:test"
+    "test": "npm run db:test && npm run auth:test && npm run auth-flows:test && npm run mfa:test && npm run account:test && npm run safety:test && npm run settings:test && npm run mobile:test && npm run pwa:test && npm run perf:test && npm run security:test && npm run deploy:test && npm run profile:test && npm run friends:test && npm run presence:test && npm run messages:test && npm run typing:test && npm run navigation:test && npm run notifications:test && npm run webrtc:test && npm run calls:test && npm run call-session:test && npm run screen-share:test && npm run call-media:test && npm run turn:test && npm run games:test && npm run wyr:test && npm run wkm:test && npm run draw:test && npm run couple:test && npm run howwell:test && npm run guess:test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

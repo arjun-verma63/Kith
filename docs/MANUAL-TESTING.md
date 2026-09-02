@@ -59,6 +59,23 @@ In `A`, visit each and confirm it renders with a clean console:
 - [ ] `/styleguide`
 - [ ] a URL that does not exist → 404, not a crash
 
+### The navigation progress bar
+
+Nothing automated renders it — `navigation.test.mjs` covers only which clicks
+should start it. Throttle the network to "Slow 3G" in devtools, then:
+
+- [ ] Click a nav item → a thin ember line appears at the top within a moment
+      and advances while the page loads
+- [ ] It reaches the right edge and fades as the new page arrives
+- [ ] Click something on a **fast** connection → **no bar at all.** It waits
+      140ms first, because a bar that flashes on every click is noise
+- [ ] Cmd-click / middle-click a link → new tab opens, **no bar** on this page
+- [ ] Click the nav item for the page you are already on → no bar
+- [ ] Browser back and forward → the bar appears for those too
+- [ ] Settings → Appearance → motion off, then navigate → the bar still appears
+      and still advances, it just does not slide
+- [ ] It sits above everything, including a toast, and never eats a click
+
 Anything below here is only worth running if this passed.
 
 ---

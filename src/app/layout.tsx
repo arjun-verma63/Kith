@@ -3,6 +3,7 @@ import { Fraunces, Manrope, Martian_Mono } from "next/font/google";
 
 import { APP, DEFAULT_THEME, THEME_STORAGE_KEY } from "@/lib/constants";
 import { clientEnv } from "@/lib/env/client";
+import { RouteProgress } from "@/components/layout/route-progress";
 import { ServiceWorker } from "@/features/pwa/service-worker";
 
 import "./globals.css";
@@ -122,6 +123,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="room grain flex min-h-full flex-col text-fg">
+        {/* Mounted at the root rather than in the signed-in shell: /login and
+            /signup are navigations too, and the first one anybody makes. */}
+        <RouteProgress />
         {children}
         {/* Registered from the root rather than the signed-in shell, so the app
             is installable from the page somebody actually lands on. */}

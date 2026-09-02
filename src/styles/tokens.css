@@ -141,6 +141,10 @@
      blocked" while the phone is ringing. */
   --z-modal: 50;
   --z-toast: 60;
+  /* A 2px line at the very top edge. Above a toast because it is the answer to
+     "did my click do anything" — the one thing that must never be occluded by
+     the thing it is explaining. */
+  --z-progress: 70;
   --z-grain: 9999;
 
   /* ------------------------------------------------------------ STROKES -- */
