@@ -271,6 +271,39 @@ section("Login");
 }
 
 {
+  /*
+   * An unconfirmed address is not a credential failure.
+   *
+   * GoTrue validates the password first and only then checks confirmation, so
+   * this reaches somebody who has already proved they know it — saying so leaks
+   * nothing. Reporting it as "email and password do not match" sends a person
+   * hunting for a password problem they do not have, which is what happened the
+   * first time this app was deployed with mail misconfigured.
+   */
+  script({
+    signInWithPassword: {
+      data: {},
+      error: { status: 400, code: "email_not_confirmed", message: "Email not confirmed" },
+    },
+  });
+  const unconfirmed = await run(
+    signInAction,
+    form({ email: "ada@example.test", password: "correct horse battery staple" }),
+  );
+
+  truthy(
+    "an unconfirmed address says so, rather than blaming the password",
+    /confirm/i.test(unconfirmed.result?.message ?? ""),
+    `said: ${unconfirmed.result?.message}`,
+  );
+  truthy(
+    "and does not claim the details are wrong",
+    !/do not match/i.test(unconfirmed.result?.message ?? ""),
+    `said: ${unconfirmed.result?.message}`,
+  );
+}
+
+{
   script({
     signInWithPassword: { data: { user: { id: "u", email_confirmed_at: null } }, error: null },
   });

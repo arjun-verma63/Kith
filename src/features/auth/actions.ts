@@ -146,8 +146,30 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
   });
 
   if (error) {
-    // One message for every failure. "That email is not registered" would tell a
-    // stranger exactly who is a member of a private room.
+    /*
+     * An unconfirmed address is NOT a credential failure, and must not be
+     * reported as one.
+     *
+     * GoTrue validates the password first and only then checks confirmation, so
+     * `email_not_confirmed` is returned to somebody who has already proved they
+     * know the password. Saying so leaks nothing they did not already have —
+     * whereas the generic message sends a person hunting for a password problem
+     * they do not have, which is exactly what happened the first time anybody
+     * signed up for this app with mail misconfigured.
+     *
+     * The anti-enumeration rule below still holds for the case it exists for:
+     * "no account with that email" and "wrong password" stay indistinguishable.
+     */
+    if (error.code === "email_not_confirmed") {
+      return {
+        status: "error",
+        message:
+          "Your password is right, but this address has not been confirmed yet. Check your inbox for the link from when you signed up.",
+      };
+    }
+
+    // One message for every genuine credential failure. "That email is not
+    // registered" would tell a stranger exactly who is a member of a private room.
     if (error.status === 400 || error.status === 401) {
       return {
         status: "error",
