@@ -31,21 +31,8 @@ export const ALWAYS_OPEN = ["/", "/auth/confirm", "/api/health", "/verify-email"
 /** Where a session that has not yet proved its second factor is held. */
 export const MFA_CHALLENGE_ROUTE = "/verify-2fa";
 
-/**
- * Where a signed-in, verified user lands when they have nowhere better to be.
- *
- * `/messages`, not `/`. There is no signed-in view at `/` — the app group has no
- * page there, so `/` is only ever the public marketing page, and the manifest
- * already calls `/messages` the app's home.
- *
- * Pointing this at `/` made every "you are already signed in" redirect land on
- * the marketing page, which read as broken buttons: a signed-in visitor clicks
- * "Sign in", goes to `/login`, is bounced back to `/`, and sees the same page
- * with the same button. Nothing had failed and nothing appeared to happen.
- *
- * Reported from production, where it is the first thing anybody does.
- */
-export const DEFAULT_SIGNED_IN_ROUTE = "/messages";
+/** Where a signed-in, verified user lands when they have nowhere better to be. */
+export const DEFAULT_SIGNED_IN_ROUTE = "/";
 
 export interface RedirectContext {
   pathname: string;
@@ -162,10 +149,10 @@ export function decideRedirect(context: RedirectContext): RedirectDecision | nul
    * up", and above the auth-route rule so the challenge cannot be skipped by
    * navigating to /login and back.
    *
-   * `/` is deliberately not held: it is the public landing page and reads
-   * nothing, so a half-authenticated session sitting on it learns nothing it
-   * should not. The sign-in action sends such a session straight to the
-   * challenge, so nobody reaches it with a code outstanding by the normal route.
+   * `/` is deliberately not held: it is the public landing page, reads nothing,
+   * and is where DEFAULT_SIGNED_IN_ROUTE points. The sign-in action sends a
+   * half-authenticated session straight to the challenge instead, so nobody
+   * reaches the landing page with a code outstanding by the normal route.
    */
   if (mfaChallengeRequired) {
     if (matchesPrefix(pathname, PROTECTED_PREFIXES) || matchesPrefix(pathname, AUTH_ROUTES)) {

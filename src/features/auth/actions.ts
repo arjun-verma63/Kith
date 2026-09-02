@@ -168,6 +168,30 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
       };
     }
 
+    /*
+     * Neither is a disabled provider.
+     *
+     * GoTrue answers a genuinely wrong password with 400 `invalid_credentials`.
+     * A 422 from the token endpoint means the request never got as far as
+     * checking one — email sign-in is switched off in the project, or signups
+     * are. Reporting that as "those details are not valid" points the one person
+     * who cannot fix it at the one thing that is not wrong, and the operator
+     * never hears about it.
+     *
+     * Third instance of this shape found in a single afternoon of going live.
+     */
+    if (
+      error.code === "email_provider_disabled" ||
+      error.code === "provider_disabled" ||
+      error.code === "signup_disabled"
+    ) {
+      return {
+        status: "error",
+        message:
+          "Email sign-in is switched off for this app. Nothing is wrong with your details — whoever runs it needs to turn the email provider back on.",
+      };
+    }
+
     // One message for every genuine credential failure. "That email is not
     // registered" would tell a stranger exactly who is a member of a private room.
     if (error.status === 400 || error.status === 401) {

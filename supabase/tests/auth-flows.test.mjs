@@ -304,6 +304,33 @@ section("Login");
 }
 
 {
+  /*
+   * A disabled provider is not a credential failure either.
+   *
+   * GoTrue answers a wrong password with 400 `invalid_credentials`; a 422 from
+   * the token endpoint means it never checked one. Saying "those details are not
+   * valid" points the one person who cannot fix it at the one thing that is not
+   * wrong.
+   */
+  for (const code of ["email_provider_disabled", "provider_disabled", "signup_disabled"]) {
+    script({
+      signInWithPassword: { data: {}, error: { status: 422, code, message: code } },
+    });
+    const result = await run(
+      signInAction,
+      form({ email: "ada@example.test", password: "correct horse battery staple" }),
+    );
+
+    truthy(
+      `${code} says the app is misconfigured, not that the details are wrong`,
+      /switched off/i.test(result.result?.message ?? "") &&
+        !/not valid|do not match/i.test(result.result?.message ?? ""),
+      `said: ${result.result?.message}`,
+    );
+  }
+}
+
+{
   script({
     signInWithPassword: { data: { user: { id: "u", email_confirmed_at: null } }, error: null },
   });

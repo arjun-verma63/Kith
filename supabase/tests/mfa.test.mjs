@@ -49,7 +49,7 @@ register(pathToFileURL(join(import.meta.dirname, "alias-loader.mjs")).href);
 
 const { canPerformSensitiveAction, deriveMfaState, MAX_FACTORS, totpCodeSchema } =
   await import("../../src/features/auth/mfa.ts");
-const { decideRedirect, safeRedirect, MFA_CHALLENGE_ROUTE, DEFAULT_SIGNED_IN_ROUTE } =
+const { decideRedirect, safeRedirect, MFA_CHALLENGE_ROUTE } =
   await import("../../src/features/auth/redirects.ts");
 
 let passed = 0;
@@ -274,8 +274,7 @@ const settled = (pathname, over = {}) =>
     settled("/verify-2fa")?.reason,
     "already_authenticated",
   );
-  // Home is the app, not the marketing page — see redirects.ts.
-  eq("so it sends you home", settled("/verify-2fa")?.to, DEFAULT_SIGNED_IN_ROUTE);
+  eq("so it sends you home", settled("/verify-2fa")?.to, "/");
 
   eq(
     "and signed out, it sends you to sign in",
