@@ -85,6 +85,28 @@ and point Preview at a _second_ Supabase project (§6 of
 the browser bundle. Row Level Security is what protects the data, which is why
 every table gets a policy before it gets a feature.
 
+### Secret or Config
+
+Vercel asks which each variable is, and refuses to save a `NEXT_PUBLIC_` one
+marked **Secret** — correctly, because a Secret is write-only and a
+`NEXT_PUBLIC_` value is compiled into the browser bundle, where it is readable by
+anyone. The two cannot both be true.
+
+The prefix is the whole rule:
+
+| Variable                                   | Type       |
+| ------------------------------------------ | ---------- |
+| `NEXT_PUBLIC_SITE_URL`                     | **Config** |
+| `NEXT_PUBLIC_SUPABASE_URL`                 | **Config** |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`            | **Config** |
+| `SUPABASE_SERVICE_ROLE_KEY`                | **Secret** |
+| `TURN_SHARED_SECRET`, `TURN_PASSWORD`      | **Secret** |
+| `TURN_URLS`, `TURN_CREDENTIAL_TTL_SECONDS` | Config     |
+
+The anon key feels like it should be Secret and is not. Marking it so does not
+make it private — the value still ships to every browser — it only stops you
+reading it back in the dashboard.
+
 Two things do **not** go here:
 
 - **SMTP credentials.** Supabase sends KITH's mail, so they belong in the
