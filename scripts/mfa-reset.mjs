@@ -32,6 +32,11 @@
 
 import { createClient } from "@supabase/supabase-js";
 
+import { loadEnvLocal } from "./load-env.mjs";
+
+// Next reads .env.local for `npm run dev`; a plain Node script has to ask.
+loadEnvLocal();
+
 const [email, ...flags] = process.argv.slice(2);
 const remove = flags.includes("--remove");
 
